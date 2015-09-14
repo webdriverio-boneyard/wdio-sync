@@ -76,4 +76,17 @@ let runInFiberContext = function (testInterface, ui, fnName) {
     }
 }
 
-export { wrapCommand, runInFiberContext }
+let runBefore = function (beforeFn) {
+    return new Promise((resolve, reject) => {
+        Fiber(() => {
+            try {
+                beforeFn()
+                resolve()
+            } catch (e) {
+                reject(e)
+            }
+        }).run()
+    })
+}
+
+export { wrapCommand, runInFiberContext, runBefore }

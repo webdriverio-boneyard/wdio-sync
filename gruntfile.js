@@ -7,9 +7,8 @@ module.exports = function(grunt) {
                 sourceMap: false
             },
             dist: {
-                files: {
-                    'build/index.js': './index.js'
-                }
+                src: 'index.js',
+                dest: 'build/index.js'
             }
         },
         eslint: {
