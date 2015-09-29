@@ -11,6 +11,12 @@ module.exports = function(grunt) {
                 dest: 'build/index.js'
             }
         },
+        watch: {
+            dist: {
+                files: ['index.js'],
+                task: ['babel:dist']
+            }
+        },
         eslint: {
             options: {
                 parser: 'babel-eslint'
