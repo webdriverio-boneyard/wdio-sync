@@ -76,11 +76,11 @@ let runInFiberContext = function (testInterface, ui, fnName) {
     }
 }
 
-let runBefore = function (beforeFn) {
+let runHook = function (hookFn) {
     return new Promise((resolve, reject) => {
         Fiber(() => {
             try {
-                beforeFn()
+                hookFn()
                 resolve()
             } catch (e) {
                 reject(e)
@@ -89,4 +89,4 @@ let runBefore = function (beforeFn) {
     })
 }
 
-export { wrapCommand, runInFiberContext, runBefore }
+export { wrapCommand, runInFiberContext, runHook }
