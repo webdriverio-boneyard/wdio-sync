@@ -13,7 +13,7 @@ module.exports = function(grunt) {
         },
         watch: {
             dist: {
-                files: ['index.js'],
+                files: 'index.js',
                 task: ['babel:dist']
             }
         },
@@ -40,7 +40,6 @@ module.exports = function(grunt) {
     grunt.registerTask('default', ['build']);
     grunt.registerTask('build', 'Build wdio-mocha', function() {
         grunt.task.run([
-            'jshint',
             'eslint',
             'clean',
             'babel'

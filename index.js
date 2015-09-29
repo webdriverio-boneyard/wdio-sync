@@ -2,7 +2,7 @@ import Future from 'fibers/future'
 import Fiber from 'fibers'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
-    'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners', ]
+    'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
 
 let fiberify = function (origFn) {
     return function (...commandArgs) {
@@ -15,9 +15,9 @@ let fiberify = function (origFn) {
 }
 
 let wrapCommand = function (instance) {
-    Object.keys(implementedCommands).forEach((commandName) => {
+    Object.keys(Object.getPrototypeOf(instance)).forEach((commandName) => {
         if (SYNC_COMMANDS.indexOf(commandName) > -1) {
-            return;
+            return
         }
 
         let origFn = instance[commandName]
@@ -38,7 +38,7 @@ let wrapCommand = function (instance) {
 
 let runInFiberContext = function (testInterface, ui, fnName) {
     let origFn = global[fnName]
-    let testInterfaceFnName = testInterface[2]
+    let testInterfaceFnName = testInterface[ui][2]
 
     let runSpec = function (specTitle, specFn) {
         return origFn(specTitle, function (done) {
