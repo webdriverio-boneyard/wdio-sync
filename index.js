@@ -1,6 +1,9 @@
 import Future from 'fibers/future'
 import Fiber from 'fibers'
 
+const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
+    'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners', ]
+
 let fiberify = function (origFn) {
     return function (...commandArgs) {
         let future = new Future()
@@ -11,10 +14,13 @@ let fiberify = function (origFn) {
     }
 }
 
-let wrapCommand = function (instance, implementedCommands) {
+let wrapCommand = function (instance) {
     Object.keys(implementedCommands).forEach((commandName) => {
+        if (SYNC_COMMANDS.indexOf(commandName) > -1) {
+            return;
+        }
+
         let origFn = instance[commandName]
-        instance[`${commandName}Async`] = origFn
         instance[commandName] = fiberify(origFn)
     })
 
