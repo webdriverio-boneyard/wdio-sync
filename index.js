@@ -43,16 +43,16 @@ let runInFiberContext = function (testInterface, ui, fnName) {
     let runSpec = function (specTitle, specFn) {
         return origFn(specTitle, function (done) {
             Fiber(() => {
-                specFn()
+                specFn.call(this)
                 done()
             }).run()
         })
     }
 
     let runHook = function (specFn, specTimeout) {
-        return origFn((done) => {
+        return origFn(function (done) {
             Fiber(() => {
-                specFn()
+                specFn.call(this)
                 done()
             }).run()
         }, specTimeout)
