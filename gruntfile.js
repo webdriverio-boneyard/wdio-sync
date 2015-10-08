@@ -38,7 +38,7 @@ module.exports = function(grunt) {
 
     require('load-grunt-tasks')(grunt);
     grunt.registerTask('default', ['build']);
-    grunt.registerTask('build', 'Build wdio-mocha', function() {
+    grunt.registerTask('build', 'Build wdio-sync', function() {
         grunt.task.run([
             'eslint',
             'clean',
