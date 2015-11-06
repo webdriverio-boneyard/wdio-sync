@@ -29,10 +29,29 @@ let wrapCommand = function (instance) {
      * since everything runs sync. There is no need to promisify the command.
      */
     instance.addCommand = function (fnName, fn, forceOverwrite) {
-        if (instance[fnName] && !forceOverwrite) {
+        let commandGroup = instance
+
+        if (typeof fn === 'string') {
+            const namespace = arguments[0]
+            fnName = arguments[1]
+            fn = arguments[2]
+            forceOverwrite = arguments[3]
+
+            switch (typeof commandGroup[namespace]) {
+            case 'function':
+                throw new Error(`Command namespace "${namespace}" is used internally, and can't be overwritten!`)
+            case 'undefined':
+                commandGroup[namespace] = {}
+                break
+            }
+
+            commandGroup = commandGroup[namespace]
+        }
+
+        if (commandGroup[fnName] && !forceOverwrite) {
             throw new Error(`Command ${fnName} is already defined!`)
         }
-        instance[fnName] = fn
+        commandGroup[fnName] = fn
     }
 }
 
