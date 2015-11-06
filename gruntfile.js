@@ -14,7 +14,7 @@ module.exports = function(grunt) {
         watch: {
             dist: {
                 files: 'index.js',
-                task: ['babel:dist']
+                tasks: ['babel:dist']
             }
         },
         eslint: {
