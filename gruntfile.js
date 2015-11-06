@@ -7,13 +7,8 @@ module.exports = function(grunt) {
                 sourceMap: false
             },
             dist: {
-                files: [{
-                    expand: true,
-                    cwd: './lib',
-                    src: 'index.js',
-                    dest: 'build/index.js',
-                    ext: '.js'
-                }]
+                src: 'index.js',
+                dest: 'build/index.js'
             }
         },
         watch: {
