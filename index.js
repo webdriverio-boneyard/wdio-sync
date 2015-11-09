@@ -3,7 +3,7 @@ import Fiber from 'fibers'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
-const NOOP = function() {}
+const NOOP = function () {}
 
 let fiberify = function (origFn) {
     return function (...commandArgs) {
