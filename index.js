@@ -3,6 +3,7 @@ import Fiber from 'fibers'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
+const NOOP = function() {}
 
 let fiberify = function (origFn) {
     return function (...commandArgs) {
@@ -101,11 +102,12 @@ let runInFiberContext = function (testInterface, ui, fnName) {
     }
 }
 
-let runHook = function (hookFn) {
+let runHook = function (hookFn, cb = NOOP) {
     return new Promise((resolve, reject) => {
         Fiber(() => {
             try {
                 hookFn()
+                cb()
                 resolve()
             } catch (e) {
                 reject(e)
