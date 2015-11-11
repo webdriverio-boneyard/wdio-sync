@@ -31,9 +31,10 @@ let wrapCommand = function (instance, hooks) {
      */
     instance.addCommand = function (fnName, fn, forceOverwrite) {
         let commandGroup = instance
+        let namespace
 
         if (typeof fn === 'string') {
-            const namespace = arguments[0]
+            namespace = arguments[0]
             fnName = arguments[1]
             fn = arguments[2]
             forceOverwrite = arguments[3]
