@@ -15,9 +15,14 @@ let wrapCommand = function (instance, hooks) {
         instance[commandName] = function (...commandArgs) {
             let future = new Future()
 
-            hooks.beforeCommand({command: commandName})
+            const invocation = {
+                name: commandName,
+                args: commandArgs
+            }
+
+            hooks.beforeCommand(invocation)
             let result = origFn.apply(this, commandArgs)
-            hooks.afterCommand({command: commandName})
+            hooks.afterCommand(invocation)
 
             result.then(future.return.bind(future), future.throw.bind(future))
             return future.wait()
@@ -52,15 +57,15 @@ let wrapCommand = function (instance, hooks) {
         if (commandGroup[fnName] && !forceOverwrite) {
             throw new Error(`Command ${fnName} is already defined!`)
         }
-        commandGroup[fnName] = function () {
-            const name = namespace ? `${namespace}.${fnName}` : fnName
-            instance.commandList.push({
-                name: name,
-                args: arguments
-            })
-            hooks.beforeCommand({command: name})
-            fn.apply(instance, arguments)
-            hooks.afterCommand({command: name})
+        commandGroup[fnName] = function (...commandArgs) {
+            const invocation = {
+                name: namespace ? `${namespace}.${fnName}` : fnName,
+                args: commandArgs
+            }
+            instance.commandList.push(invocation)
+            hooks.beforeCommand(invocation)
+            fn.apply(instance, commandArgs)
+            hooks.afterCommand(invocation)
         }
     }
 }
