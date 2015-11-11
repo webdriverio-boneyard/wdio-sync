@@ -15,7 +15,8 @@ let fiberify = function (origFn) {
     }
 }
 
-let wrapCommand = function (instance) {
+let wrapCommand = function (instance, hooks) {
+
     Object.keys(Object.getPrototypeOf(instance)).forEach((commandName) => {
         if (SYNC_COMMANDS.indexOf(commandName) > -1) {
             return
@@ -23,6 +24,13 @@ let wrapCommand = function (instance) {
 
         let origFn = instance[commandName]
         instance[commandName] = fiberify(origFn)
+        // instance[commandName] = function () {
+        //     return Fiber(() => {
+        //         hooks.beforeCommand({command: commandName})
+        //         origFn.call(instance)
+        //         hooks.afterCommand({command: commandName})
+        //     }).run()
+        // }
     })
 
     /**
@@ -52,11 +60,20 @@ let wrapCommand = function (instance) {
         if (commandGroup[fnName] && !forceOverwrite) {
             throw new Error(`Command ${fnName} is already defined!`)
         }
-        commandGroup[fnName] = fn
+        commandGroup[fnName] = function () {
+            const name = namespace ? `${namespace}.${fnName}` : fnName
+            instance.commandList.push({
+                name: name,
+                args: arguments
+            })
+            hooks.beforeCommand({command: name})
+            fn.apply(instance, arguments)
+            hooks.afterCommand({command: name})
+        }
     }
 }
 
-let runInFiberContext = function (testInterface, ui, fnName) {
+let runInFiberContext = function (testInterface, ui, hooks, fnName) {
     let origFn = global[fnName]
     let testInterfaceFnName = testInterface[ui][2]
 
@@ -69,13 +86,16 @@ let runInFiberContext = function (testInterface, ui, fnName) {
         })
     }
 
-    let runHook = function (specFn, specTimeout) {
-        return origFn(function (done) {
+    let runHook = function (specTitle, specFn) {
+        return origFn(specTitle, function (done) {
             Fiber(() => {
+                // console.log('actual mocha call running', specTitle)
+                hooks.beforeHook()
                 specFn.call(this)
+                hooks.afterHook()
                 done()
             }).run()
-        }, specTimeout)
+        })
     }
 
     global[fnName] = function (...specArguments) {
@@ -93,7 +113,7 @@ let runInFiberContext = function (testInterface, ui, fnName) {
             return runSpec(specTitle, specFn)
         }
 
-        return runHook(specFn)
+        return runHook(specTitle, specFn)
     }
 
     if (fnName === testInterfaceFnName) {
@@ -116,4 +136,8 @@ let runHook = function (hookFn, cb = NOOP) {
     })
 }
 
-export { wrapCommand, runInFiberContext, runHook }
+let wrapFn = function (fn) {
+    return fiberify(fn)
+}
+
+export { wrapCommand, runInFiberContext, runHook, wrapFn }
