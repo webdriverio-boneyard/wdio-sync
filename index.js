@@ -5,16 +5,6 @@ const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
 const NOOP = function () {}
 
-let fiberify = function (origFn) {
-    return function (...commandArgs) {
-        let future = new Future()
-        let result = origFn.apply(this, commandArgs)
-
-        result.then(future.return.bind(future), future.throw.bind(future))
-        return future.wait()
-    }
-}
-
 let wrapCommand = function (instance, hooks) {
 
     Object.keys(Object.getPrototypeOf(instance)).forEach((commandName) => {
@@ -23,14 +13,16 @@ let wrapCommand = function (instance, hooks) {
         }
 
         let origFn = instance[commandName]
-        instance[commandName] = fiberify(origFn)
-        // instance[commandName] = function () {
-        //     return Fiber(() => {
-        //         hooks.beforeCommand({command: commandName})
-        //         origFn.call(instance)
-        //         hooks.afterCommand({command: commandName})
-        //     }).run()
-        // }
+        instance[commandName] = function (...commandArgs) {
+            let future = new Future()
+
+            hooks.beforeCommand({command: commandName})
+            let result = origFn.apply(this, commandArgs)
+            hooks.afterCommand({command: commandName})
+
+            result.then(future.return.bind(future), future.throw.bind(future))
+            return future.wait()
+        }
     })
 
     /**
@@ -136,8 +128,14 @@ let runHook = function (hookFn, cb = NOOP) {
     })
 }
 
-let wrapFn = function (fn) {
-    return fiberify(fn)
+let wrapFn = function (origFn) {
+    return function (...commandArgs) {
+        let future = new Future()
+        let result = origFn.apply(this, commandArgs)
+
+        result.then(future.return.bind(future), future.throw.bind(future))
+        return future.wait()
+    }
 }
 
 export { wrapCommand, runInFiberContext, runHook, wrapFn }
