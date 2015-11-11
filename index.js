@@ -86,7 +86,6 @@ let runInFiberContext = function (testInterface, ui, hooks, fnName) {
     let runHook = function (specTitle, specFn) {
         return origFn(specTitle, function (done) {
             Fiber(() => {
-                // console.log('actual mocha call running', specTitle)
                 hooks.beforeHook()
                 specFn.call(this)
                 hooks.afterHook()
