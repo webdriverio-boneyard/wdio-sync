@@ -30,9 +30,10 @@ let wrapCommand = function (instance) {
      */
     instance.addCommand = function (fnName, fn, forceOverwrite) {
         let commandGroup = instance
+        let namespace
 
         if (typeof fn === 'string') {
-            const namespace = arguments[0]
+            namespace = arguments[0]
             fnName = arguments[1]
             fn = arguments[2]
             forceOverwrite = arguments[3]
@@ -51,7 +52,14 @@ let wrapCommand = function (instance) {
         if (commandGroup[fnName] && !forceOverwrite) {
             throw new Error(`Command ${fnName} is already defined!`)
         }
-        commandGroup[fnName] = fn
+        commandGroup[fnName] = function () {
+            const name = namespace ? `${namespace}.${fnName}` : fnName
+            instance.commandList.push({
+                name: name,
+                args: arguments
+            })
+            fn.apply(instance, arguments)
+        }
     }
 }
 
