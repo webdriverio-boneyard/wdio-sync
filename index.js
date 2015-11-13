@@ -3,25 +3,30 @@ import Fiber from 'fibers'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
+const NOOP = function () {}
 
-let fiberify = function (origFn) {
-    return function (...commandArgs) {
-        let future = new Future()
-        let result = origFn.apply(this, commandArgs)
-
-        result.then(future.return.bind(future), future.throw.bind(future))
-        return future.wait()
-    }
-}
-
-let wrapCommand = function (instance) {
+let wrapCommand = function (instance, hooks) {
     Object.keys(Object.getPrototypeOf(instance)).forEach((commandName) => {
         if (SYNC_COMMANDS.indexOf(commandName) > -1) {
             return
         }
 
         let origFn = instance[commandName]
-        instance[commandName] = fiberify(origFn)
+        instance[commandName] = function (...commandArgs) {
+            let future = new Future()
+
+            const invocation = {
+                name: commandName,
+                args: commandArgs
+            }
+
+            hooks.beforeCommand(invocation)
+            let result = origFn.apply(this, commandArgs)
+            hooks.afterCommand(invocation)
+
+            result.then(future.return.bind(future), future.throw.bind(future))
+            return future.wait()
+        }
     })
 
     /**
@@ -52,18 +57,20 @@ let wrapCommand = function (instance) {
         if (commandGroup[fnName] && !forceOverwrite) {
             throw new Error(`Command ${fnName} is already defined!`)
         }
-        commandGroup[fnName] = function () {
-            const name = namespace ? `${namespace}.${fnName}` : fnName
-            instance.commandList.push({
-                name: name,
-                args: arguments
-            })
-            fn.apply(instance, arguments)
+        commandGroup[fnName] = function (...commandArgs) {
+            const invocation = {
+                name: namespace ? `${namespace}.${fnName}` : fnName,
+                args: commandArgs
+            }
+            instance.commandList.push(invocation)
+            hooks.beforeCommand(invocation)
+            fn.apply(instance, commandArgs)
+            hooks.afterCommand(invocation)
         }
     }
 }
 
-let runInFiberContext = function (testInterface, ui, fnName) {
+let runInFiberContext = function (testInterface, ui, hooks, fnName) {
     let origFn = global[fnName]
     let testInterfaceFnName = testInterface[ui][2]
 
@@ -76,13 +83,15 @@ let runInFiberContext = function (testInterface, ui, fnName) {
         })
     }
 
-    let runHook = function (specFn, specTimeout) {
-        return origFn(function (done) {
+    let runHook = function (specTitle, specFn) {
+        return origFn(specTitle, function (done) {
             Fiber(() => {
+                hooks.beforeHook()
                 specFn.call(this)
+                hooks.afterHook()
                 done()
             }).run()
-        }, specTimeout)
+        })
     }
 
     global[fnName] = function (...specArguments) {
@@ -100,7 +109,7 @@ let runInFiberContext = function (testInterface, ui, fnName) {
             return runSpec(specTitle, specFn)
         }
 
-        return runHook(specFn)
+        return runHook(specTitle, specFn)
     }
 
     if (fnName === testInterfaceFnName) {
@@ -109,11 +118,12 @@ let runInFiberContext = function (testInterface, ui, fnName) {
     }
 }
 
-let runHook = function (hookFn) {
+let runHook = function (hookFn, cb = NOOP) {
     return new Promise((resolve, reject) => {
         Fiber(() => {
             try {
                 hookFn()
+                cb()
                 resolve()
             } catch (e) {
                 reject(e)
@@ -122,4 +132,14 @@ let runHook = function (hookFn) {
     })
 }
 
-export { wrapCommand, runInFiberContext, runHook }
+let wrapFn = function (origFn) {
+    return function (...commandArgs) {
+        let future = new Future()
+        let result = origFn.apply(this, commandArgs)
+
+        result.then(future.return.bind(future), future.throw.bind(future))
+        return future.wait()
+    }
+}
+
+export { wrapCommand, runInFiberContext, runHook, wrapFn }
