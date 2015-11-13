@@ -64,8 +64,9 @@ let wrapCommand = function (instance, hooks) {
             }
             instance.commandList.push(invocation)
             hooks.beforeCommand(invocation)
-            fn.apply(instance, commandArgs)
+            const ret = fn.apply(instance, commandArgs)
             hooks.afterCommand(invocation)
+            return ret
         }
     }
 }
