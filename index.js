@@ -5,28 +5,111 @@ const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
 const NOOP = function () {}
 
-let wrapCommand = function (instance, hooks) {
+let commandIsRunning = false
+
+/**
+ * helper method to execute a row of hooks with certain parameters
+ * @param  {Function|Function[]} hooks  list of hooks
+ * @param  {Object[]} args  list of parameter for hook functions
+ * @return {Promise}  promise that gets resolved once all hooks finished running
+ */
+let executeHooksWithArgs = (hooks, args) => {
+    /**
+     * make sure hooks are an array of functions
+     */
+    if (typeof hooks === 'function') {
+        hooks = [hooks]
+    }
+
+    /**
+     * make sure args is an array since we are calling apply
+     */
+    if (!Array.isArray(args)) {
+        args = [args]
+    }
+
+    hooks = hooks.map((hook) => new Promise((resolve) => {
+        try {
+            /**
+             * after command hooks require additional Fiber environment
+             */
+            return Fiber(() => {
+                resolve(hook.apply(null, args))
+            }).run()
+        } catch (e) {
+            // here could be your error message
+        }
+
+        resolve()
+    }))
+
+    return Promise.all(hooks)
+}
+
+/**
+ * wraps a function into a Fiber ready context to enable sync execution and hooks
+ * @param  {Function}   fn             function to be executed
+ * @param  {String}     commandName    name of that function
+ * @param  {Function[]} beforeCommand  method to be executed before calling the actual function
+ * @param  {Function[]} afterCommand   method to be executed after calling the actual function
+ * @return {Function}   actual wrapped function
+ */
+let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
+    return function (...commandArgs) {
+        let future = new Future()
+
+        /**
+         * don't execute [before/after]Command hook if a command was executed
+         * in these hooks
+         */
+        if (commandIsRunning) {
+            fn.apply(this, commandArgs).then(future.return.bind(future), future.throw.bind(future))
+            return future.wait()
+        }
+
+        commandIsRunning = true
+        let commandResult, commandError
+        new Promise((r) => r(beforeCommand(commandName, commandArgs)))
+            .then(() => {
+                return fn.apply(this, commandArgs)
+            })
+            .then(
+                (result) => {
+                    commandResult = result
+                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, result])
+                },
+                (e) => {
+                    commandError = e
+                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
+                }
+            )
+            .then(() => {
+                commandIsRunning = false
+
+                if (commandError) {
+                    return future.throw(commandError)
+                }
+                return future.return(commandResult)
+            })
+
+        return future.wait()
+    }
+}
+
+/**
+ * wraps all WebdriverIO commands
+ * @param  {Object}     instance       WebdriverIO client instance (browser)
+ * @param  {Function[]} beforeCommand  before command hook
+ * @param  {Function[]} afterCommand   after command hook
+ */
+let wrapCommands = function (instance, beforeCommand, afterCommand) {
     Object.keys(Object.getPrototypeOf(instance)).forEach((commandName) => {
         if (SYNC_COMMANDS.indexOf(commandName) > -1) {
             return
         }
 
         let origFn = instance[commandName]
-        instance[commandName] = function (...commandArgs) {
-            let future = new Future()
-
-            const invocation = {
-                name: commandName,
-                args: commandArgs
-            }
-
-            hooks.beforeCommand(invocation)
-            let result = origFn.apply(this, commandArgs)
-            hooks.afterCommand(invocation)
-
-            result.then(future.return.bind(future), future.throw.bind(future))
-            return future.wait()
-        }
+        instance[commandName] = wrapCommand(origFn, commandName, beforeCommand, afterCommand)
     })
 
     /**
@@ -57,21 +140,12 @@ let wrapCommand = function (instance, hooks) {
         if (commandGroup[fnName] && !forceOverwrite) {
             throw new Error(`Command ${fnName} is already defined!`)
         }
-        commandGroup[fnName] = function (...commandArgs) {
-            const invocation = {
-                name: namespace ? `${namespace}.${fnName}` : fnName,
-                args: commandArgs
-            }
-            instance.commandList.push(invocation)
-            hooks.beforeCommand(invocation)
-            const ret = fn.apply(instance, commandArgs)
-            hooks.afterCommand(invocation)
-            return ret
-        }
+
+        commandGroup[fnName] = wrapCommand(fn, fnName, beforeCommand, afterCommand)
     }
 }
 
-let runInFiberContext = function (testInterface, ui, hooks, fnName) {
+let runInFiberContext = function (testInterface, ui, before, after, fnName) {
     let origFn = global[fnName]
     let testInterfaceFnName = testInterface[ui][2]
 
@@ -87,9 +161,9 @@ let runInFiberContext = function (testInterface, ui, hooks, fnName) {
     let runHook = function (specTitle, specFn) {
         return origFn(specTitle, function (done) {
             Fiber(() => {
-                hooks.beforeHook()
+                before()
                 specFn.call(this)
-                hooks.afterHook()
+                after()
                 done()
             }).run()
         })
@@ -133,6 +207,11 @@ let runHook = function (hookFn, cb = NOOP) {
     })
 }
 
+/**
+ * wraps a function that returns a promise to be used within Fiber
+ * @param  {Function} origFn  actual function to be executed (needs to return a Promise)
+ * @return {Object}           Fiber wait object
+ */
 let wrapFn = function (origFn) {
     return function (...commandArgs) {
         let future = new Future()
@@ -143,4 +222,4 @@ let wrapFn = function (origFn) {
     }
 }
 
-export { wrapCommand, runInFiberContext, runHook, wrapFn }
+export { wrapCommand, wrapCommands, runInFiberContext, runHook, wrapFn }
