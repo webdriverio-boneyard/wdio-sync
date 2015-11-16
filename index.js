@@ -29,12 +29,15 @@ let executeHooksWithArgs = (hooks, args) => {
     }
 
     hooks = hooks.map((hook) => new Promise((resolve) => {
+        let _commandIsRunning = commandIsRunning
         try {
             /**
              * after command hooks require additional Fiber environment
              */
             return Fiber(() => {
+                commandIsRunning = true
                 resolve(hook.apply(null, args))
+                commandIsRunning = _commandIsRunning
             }).run()
         } catch (e) {
             // here could be your error message
