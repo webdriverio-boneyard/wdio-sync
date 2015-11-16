@@ -147,9 +147,15 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
     }
 }
 
-let runInFiberContext = function (testInterface, ui, before, after, fnName) {
+/**
+ * [runInFiberContext description]
+ * @param  {[type]} testInterfaceFnName  global command that runs specs
+ * @param  {[type]} before               before hook hook
+ * @param  {[type]} after                after hook hook
+ * @param  {[type]} fnName               test interface command to wrap
+ */
+let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
     let origFn = global[fnName]
-    let testInterfaceFnName = testInterface[ui][2]
 
     let runSpec = function (specTitle, specFn) {
         return origFn(specTitle, function (done) {
