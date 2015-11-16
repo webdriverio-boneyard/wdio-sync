@@ -187,7 +187,7 @@ let runInFiberContext = function (testInterface, ui, before, after, fnName) {
             return runSpec(specTitle, specFn)
         }
 
-        return runHook(specTitle, specFn)
+        return runHook(specFn)
     }
 
     if (fnName === testInterfaceFnName) {
