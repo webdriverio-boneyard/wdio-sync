@@ -59,20 +59,37 @@ let executeHooksWithArgs = (hooks, args) => {
 let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
     return function (...commandArgs) {
         let future = new Future()
+        let futureFailed = false
 
         /**
          * don't execute [before/after]Command hook if a command was executed
          * in these hooks
          */
         if (commandIsRunning) {
-            fn.apply(this, commandArgs).then(future.return.bind(future), future.throw.bind(future))
-            return future.wait()
+            let commandPromise = fn.apply(this, commandArgs)
+
+            /**
+             * try to execute with Fibers and fall back if can't
+             */
+            try {
+                commandPromise.then(future.return.bind(future), future.throw.bind(future))
+                return future.wait()
+            } catch (e) {
+                return commandIsRunning
+            }
         }
 
         commandIsRunning = true
         let commandResult, commandError
         new Promise((r) => r(beforeCommand(commandName, commandArgs)))
             .then(() => {
+                /**
+                 * actual function was already executed in desired catch block
+                 */
+                if (futureFailed) {
+                    return
+                }
+
                 return fn.apply(this, commandArgs)
             })
             .then(
@@ -94,7 +111,15 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 return future.return(commandResult)
             })
 
-        return future.wait()
+        /**
+         * try to execute with Fibers and fall back if can't
+         */
+        try {
+            return future.wait()
+        } catch (e) {
+            futureFailed = true
+            return fn.apply(this, commandArgs)
+        }
     }
 }
 
