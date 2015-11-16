@@ -160,13 +160,13 @@ let runInFiberContext = function (testInterface, ui, before, after, fnName) {
         })
     }
 
-    let runHook = function (specTitle, specFn) {
-        return origFn(specTitle, function (done) {
+    let runHook = function (hookFn) {
+        return origFn(function (done) {
             Fiber(() => {
-                before()
-                specFn.call(this)
-                after()
-                done()
+                executeHooksWithArgs(before)
+                    .then(() => hookFn.call(this))
+                    .then(() => executeHooksWithArgs(after))
+                    .then(() => done(), () => done())
             }).run()
         })
     }
