@@ -3,7 +3,6 @@ import Fiber from 'fibers'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
-const NOOP = function () {}
 
 let commandIsRunning = false
 
@@ -196,33 +195,4 @@ let runInFiberContext = function (testInterface, ui, before, after, fnName) {
     }
 }
 
-let runHook = function (hookFn, cb = NOOP) {
-    return new Promise((resolve, reject) => {
-        Fiber(() => {
-            try {
-                hookFn()
-                cb()
-                resolve()
-            } catch (e) {
-                reject(e)
-            }
-        }).run()
-    })
-}
-
-/**
- * wraps a function that returns a promise to be used within Fiber
- * @param  {Function} origFn  actual function to be executed (needs to return a Promise)
- * @return {Object}           Fiber wait object
- */
-let wrapFn = function (origFn) {
-    return function (...commandArgs) {
-        let future = new Future()
-        let result = origFn.apply(this, commandArgs)
-
-        result.then(future.return.bind(future), future.throw.bind(future))
-        return future.wait()
-    }
-}
-
-export { wrapCommand, wrapCommands, runInFiberContext, runHook, wrapFn }
+export { wrapCommand, wrapCommands, runInFiberContext, executeHooksWithArgs }
