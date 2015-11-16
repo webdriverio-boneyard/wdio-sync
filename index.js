@@ -49,6 +49,19 @@ let executeHooksWithArgs = (hooks, args) => {
 }
 
 /**
+ * global function to wrap callbacks into Fiber context
+ * @param  {Function} fn  function to wrap around
+ * @return {Function}     wrapped around function
+ */
+global.wdioSync = function (fn) {
+    return function (...args) {
+        return Fiber(() => {
+            fn.apply(this, args)
+        }).run()
+    }
+}
+
+/**
  * wraps a function into a Fiber ready context to enable sync execution and hooks
  * @param  {Function}   fn             function to be executed
  * @param  {String}     commandName    name of that function
