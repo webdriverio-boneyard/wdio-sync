@@ -1,4 +1,4 @@
-module.exports = function(grunt) {
+module.exports = function (grunt) {
     grunt.initConfig({
         pkgFile: 'package.json',
         clean: ['build'],
@@ -9,6 +9,17 @@ module.exports = function(grunt) {
             dist: {
                 src: 'index.js',
                 dest: 'build/index.js'
+            }
+        },
+        mocha_istanbul: {
+            coverage: {
+                src: ['test/*.spec.js'],
+                options: {
+                    scriptPath: require.resolve('isparta/bin/isparta'),
+                    reporter: 'spec',
+                    mochaOptions: ['--compilers', 'js:babel/register', '--recursive'],
+                    require: ['should']
+                }
             }
         },
         watch: {
@@ -34,22 +45,23 @@ module.exports = function(grunt) {
                 pushTo: 'upstream'
             }
         }
-    });
+    })
 
-    require('load-grunt-tasks')(grunt);
-    grunt.registerTask('default', ['build']);
-    grunt.registerTask('build', 'Build wdio-sync', function() {
+    require('load-grunt-tasks')(grunt)
+    grunt.registerTask('default', ['build'])
+    grunt.registerTask('build', 'Build wdio-sync', function () {
         grunt.task.run([
             'eslint',
             'clean',
-            'babel'
-        ]);
-    });
-    grunt.registerTask('release', 'Bump and tag version', function(type) {
+            'babel',
+            'mocha_istanbul'
+        ])
+    })
+    grunt.registerTask('release', 'Bump and tag version', function (type) {
         grunt.task.run([
             'build',
             'contributors',
             'bump:' + (type || 'patch')
-        ]);
-    });
-};
+        ])
+    })
+}
