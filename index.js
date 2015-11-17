@@ -39,7 +39,7 @@ let executeHooksWithArgs = (hooks, args) => {
                 commandIsRunning = _commandIsRunning
             }).run()
         } catch (e) {
-            // here could be your error message
+            console.error(e)
         }
 
         resolve()
