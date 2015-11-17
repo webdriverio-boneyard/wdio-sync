@@ -39,7 +39,7 @@ let executeHooksWithArgs = (hooks, args) => {
                 commandIsRunning = _commandIsRunning
             }).run()
         } catch (e) {
-            console.error(e)
+            console.error(e.stack)
         }
 
         resolve()
