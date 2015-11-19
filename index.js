@@ -5,6 +5,7 @@ const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
 
 let commandIsRunning = false
+let forcePromises = false
 
 /**
  * helper method to execute a row of hooks with certain parameters
@@ -56,10 +57,10 @@ let executeHooksWithArgs = (hooks, args) => {
 global.wdioSync = function (fn, done) {
     return function (...args) {
         return Fiber(() => {
-            fn.apply(this, args)
+            const result = fn.apply(this, args)
 
             if (typeof done === 'function') {
-                done()
+                done(result)
             }
         }).run()
     }
@@ -77,6 +78,10 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
     return function (...commandArgs) {
         let future = new Future()
         let futureFailed = false
+
+        if (forcePromises) {
+            return fn.apply(this, commandArgs)
+        }
 
         /**
          * don't execute [before/after]Command hook if a command was executed
@@ -160,6 +165,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
      * Adding a command within fiber context doesn't require a special routine
      * since everything runs sync. There is no need to promisify the command.
      */
+    const origAddCommand = instance.addCommand
     instance.addCommand = function (fnName, fn, forceOverwrite) {
         let commandGroup = instance
         let namespace
@@ -185,25 +191,30 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
             throw new Error(`Command ${fnName} is already defined!`)
         }
 
-        commandGroup[fnName] = wrapCommand((...args) => {
-            /**
-             * if method name is async the user specifies that he wants to
-             * use bare promises to handle asynchronicity
-             */
-            if (fn.name === 'async') {
-                return fn.apply(instance, args)
-            }
+        /**
+         * if method name is async the user specifies that he wants to
+         * use bare promises to handle asynchronicity
+         */
+        if (fn.name === 'async') {
+            origAddCommand(fnName, (...args) => {
+                forcePromises = true
+                let res = fn.apply(instance, args)
+                forcePromises = false
+                return res
+            }, forceOverwrite)
+            instance[fnName] = wrapCommand(instance[fnName], fnName, beforeCommand, afterCommand)
+            return
+        }
 
-            /**
-             * for all other cases we internally return a promise that is
-             * finished once the Fiber wrapped custom function has finished
-             * #functionalProgrammingWTF!
-             */
-            return new Promise((r) => {
-                fn = wdioSync(fn, r)
-                fn.apply(instance, args)
-            })
-        }, fnName, beforeCommand, afterCommand)
+        /**
+         * for all other cases we internally return a promise that is
+         * finished once the Fiber wrapped custom function has finished
+         * #functionalProgrammingWTF!
+         */
+        commandGroup[fnName] = wrapCommand((...args) => new Promise((r) => {
+            fn = wdioSync(fn, r)
+            fn.apply(instance, args)
+        }), fnName, beforeCommand, afterCommand)
     }
 }
 
