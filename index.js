@@ -140,7 +140,14 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
             return future.wait()
         } catch (e) {
             futureFailed = true
+            console.log('futureFailed', e.stack)
+
+            // TODO: if fn() has already thrown an exception, why re-run it here?
             return fn.apply(this, commandArgs)
+            .catch((e) => {
+                console.log('natural fn failed', e.stack)
+                throw e
+            })
         }
     }
 }
@@ -210,8 +217,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * #functionalProgrammingWTF!
          */
         commandGroup[fnName] = wrapCommand((...args) => new Promise((r) => {
-            fn = wdioSync(fn, r)
-            fn.apply(instance, args)
+            wdioSync(fn, r).apply(instance, args)
         }), fnName, beforeCommand, afterCommand)
     }
 }
