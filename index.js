@@ -165,7 +165,6 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
      * Adding a command within fiber context doesn't require a special routine
      * since everything runs sync. There is no need to promisify the command.
      */
-    const origAddCommand = instance.addCommand
     instance.addCommand = function (fnName, fn, forceOverwrite) {
         let commandGroup = instance
         let namespace
@@ -196,13 +195,12 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * use bare promises to handle asynchronicity
          */
         if (fn.name === 'async') {
-            origAddCommand(fnName, (...args) => {
+            instance[fnName] = wrapCommand((...args) => {
                 forcePromises = true
                 let res = fn.apply(instance, args)
                 forcePromises = false
                 return res
-            }, forceOverwrite)
-            instance[fnName] = wrapCommand(instance[fnName], fnName, beforeCommand, afterCommand)
+            }, fnName, beforeCommand, afterCommand)
             return
         }
 
