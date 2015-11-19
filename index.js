@@ -140,7 +140,14 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
             return future.wait()
         } catch (e) {
             futureFailed = true
+            console.log('futureFailed', e.stack)
+
+            // TODO: if fn() has already thrown an exception, why re-run it here?
             return fn.apply(this, commandArgs)
+            .catch((e) => {
+                console.log('natural fn failed', e.stack)
+                throw e
+            })
         }
     }
 }
