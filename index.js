@@ -94,7 +94,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
 
         commandIsRunning = true
         let commandResult, commandError
-        new Promise((r) => r(beforeCommand(commandName, commandArgs)))
+        new Promise((r) => r(executeHooksWithArgs(beforeCommand, [commandName, commandArgs])))
             .then(() => {
                 /**
                  * actual function was already executed in desired catch block
