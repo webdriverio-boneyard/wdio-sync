@@ -53,10 +53,14 @@ let executeHooksWithArgs = (hooks, args) => {
  * @param  {Function} fn  function to wrap around
  * @return {Function}     wrapped around function
  */
-global.wdioSync = function (fn) {
+global.wdioSync = function (fn, done) {
     return function (...args) {
         return Fiber(() => {
             fn.apply(this, args)
+
+            if (typeof done === 'function') {
+                done()
+            }
         }).run()
     }
 }
@@ -181,7 +185,25 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
             throw new Error(`Command ${fnName} is already defined!`)
         }
 
-        commandGroup[fnName] = wrapCommand(fn, fnName, beforeCommand, afterCommand)
+        commandGroup[fnName] = wrapCommand((...args) => {
+            /**
+             * if method name is async the user specifies that he wants to
+             * use bare promises to handle asynchronicity
+             */
+            if (fn.name === 'async') {
+                return fn.apply(instance, args)
+            }
+
+            /**
+             * for all other cases we internally return a promise that is
+             * finished once the Fiber wrapped custom function has finished
+             * #functionalProgrammingWTF!
+             */
+            return new Promise((r) => {
+                fn = wdioSync(fn, r)
+                fn.apply(instance, args)
+            })
+        }, fnName, beforeCommand, afterCommand)
     }
 }
 
