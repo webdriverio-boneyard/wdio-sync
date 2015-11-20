@@ -247,7 +247,10 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
     }
 
     global[fnName] = function (...specArguments) {
-        let specFn = typeof specArguments[0] === 'function' ? specArguments.shift() : specArguments.pop()
+        let specFn
+        if (arguments.length > 1) {
+            specFn = typeof specArguments[0] === 'function' ? specArguments.shift() : specArguments.pop()
+        }
         let specTitle = specArguments[0]
 
         /**
