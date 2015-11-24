@@ -210,8 +210,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * #functionalProgrammingWTF!
          */
         commandGroup[fnName] = wrapCommand((...args) => new Promise((r) => {
-            fn = wdioSync(fn, r)
-            fn.apply(instance, args)
+            wdioSync(fn, r).apply(instance, args)
         }), fnName, beforeCommand, afterCommand)
     }
 }
