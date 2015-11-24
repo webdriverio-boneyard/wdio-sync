@@ -195,7 +195,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * use bare promises to handle asynchronicity
          */
         if (fn.name === 'async') {
-            instance[fnName] = wrapCommand((...args) => {
+            commandGroup[fnName] = wrapCommand((...args) => {
                 forcePromises = true
                 let res = fn.apply(instance, args)
                 forcePromises = false
@@ -210,8 +210,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * #functionalProgrammingWTF!
          */
         commandGroup[fnName] = wrapCommand((...args) => new Promise((r) => {
-            fn = wdioSync(fn, r)
-            fn.apply(instance, args)
+            wdioSync(fn, r).apply(instance, args)
         }), fnName, beforeCommand, afterCommand)
     }
 }
