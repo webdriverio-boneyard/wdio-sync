@@ -195,7 +195,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * use bare promises to handle asynchronicity
          */
         if (fn.name === 'async') {
-            instance[fnName] = wrapCommand((...args) => {
+            commandGroup[fnName] = wrapCommand((...args) => {
                 forcePromises = true
                 let res = fn.apply(instance, args)
                 forcePromises = false
