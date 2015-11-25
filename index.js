@@ -246,21 +246,20 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
     }
 
     global[fnName] = function (...specArguments) {
-        let specFn
-        if (arguments.length > 1) {
-            specFn = typeof specArguments[0] === 'function' ? specArguments.shift() : specArguments.pop()
-        }
+        /**
+         * Variadic arguments: [title, fn], [title], [fn]
+         */
+        let specFn = typeof specArguments[0] === 'function' ? specArguments.shift()
+            : (typeof specArguments[1] === 'function' ? specArguments.pop() : undefined)
         let specTitle = specArguments[0]
 
-        /**
-         * if specFn is undefined we are dealing with a pending function
-         */
-        if (fnName === testInterfaceFnName && arguments.length === 1) {
-            return origFn(specTitle)
-        }
-
         if (fnName === testInterfaceFnName) {
-            return runSpec(specTitle, specFn)
+            if (specFn) return runSpec(specTitle, specFn)
+
+            /**
+             * if specFn is undefined we are dealing with a pending function
+             */
+            return origFn(specTitle)
         }
 
         return runHook(specFn)
