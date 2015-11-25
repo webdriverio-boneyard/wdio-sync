@@ -51,6 +51,8 @@
     "sinon": "^1.17.2"
   },
   "contributors": [
-    "Christian Bromann <github@christian-bromann.com>"
+    "George Crawford <george.crawford@ft.com>",
+    "Christian Bromann <github@christian-bromann.com>",
+    "Kentaro Kaji <kentaro.kaji@nytimes.com>"
   ]
 }
