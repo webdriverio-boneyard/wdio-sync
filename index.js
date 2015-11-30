@@ -139,8 +139,11 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
         try {
             return future.wait()
         } catch (e) {
-            futureFailed = true
-            return fn.apply(this, commandArgs)
+            if (e.message === "Can't wait without a fiber") {
+                futureFailed = true
+                return fn.apply(this, commandArgs)
+            }
+            throw e
         }
     }
 }
