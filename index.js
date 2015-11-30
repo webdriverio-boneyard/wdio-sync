@@ -170,6 +170,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
      */
     instance.addCommand = function (fnName, fn, forceOverwrite) {
         let commandGroup = instance
+        let commandName = fnName
         let namespace
 
         if (typeof fn === 'string') {
@@ -186,6 +187,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
                 break
             }
 
+            commandName = `${namespace}.${fnName}`
             commandGroup = commandGroup[namespace]
         }
 
@@ -203,7 +205,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
                 let res = fn.apply(instance, args)
                 forcePromises = false
                 return res
-            }, fnName, beforeCommand, afterCommand)
+            }, commandName, beforeCommand, afterCommand)
             return
         }
 
@@ -214,7 +216,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          */
         commandGroup[fnName] = wrapCommand((...args) => new Promise((r) => {
             wdioSync(fn, r).apply(instance, args)
-        }), fnName, beforeCommand, afterCommand)
+        }), commandName, beforeCommand, afterCommand)
     }
 }
 
