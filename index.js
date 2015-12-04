@@ -97,7 +97,10 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 commandPromise.then(future.return.bind(future), future.throw.bind(future))
                 return future.wait()
             } catch (e) {
-                return commandIsRunning
+                if (e.message === "Can't wait without a fiber") {
+                    return commandPromise
+                }
+                throw e
             }
         }
 
