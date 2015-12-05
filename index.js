@@ -2,7 +2,8 @@ import Future from 'fibers/future'
 import Fiber from 'fibers'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
-    'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners']
+    'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners',
+    'getMaxListeners', 'listenerCount']
 
 let commandIsRunning = false
 let forcePromises = false
@@ -133,7 +134,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 if (commandError) {
                     return future.throw(commandError)
                 }
-                return future.return(commandResult)
+                return future.return(applyPrototype(this, commandResult))
             })
 
         /**
@@ -149,6 +150,27 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
             throw e
         }
     }
+}
+
+/**
+ * enhance result with instance prototype to enable command chaining
+ * @param  {Ibject} instance WebdriverIO instance
+ * @param  {[type]} result   command result
+ * @return {[type]}          command result with enhanced prototype
+ */
+let applyPrototype = function (instance, result) {
+    if (!result || typeof result !== 'object') {
+        return result
+    }
+
+    for (let commandName of Object.keys(Object.getPrototypeOf(instance))) {
+        if (result[commandName] || SYNC_COMMANDS.indexOf(commandName) > -1) {
+            continue
+        }
+        result[commandName] = instance[commandName].bind(instance)
+    }
+
+    return result
 }
 
 /**
