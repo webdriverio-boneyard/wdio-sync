@@ -146,6 +146,9 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 futureFailed = true
                 return fn.apply(this, commandArgs)
             }
+            if ('function' === typeof e.wdioExceptionHandler) {
+                return e.wdioExceptionHandler()
+            }
             throw e
         }
     }
