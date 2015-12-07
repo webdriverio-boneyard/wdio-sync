@@ -100,6 +100,12 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 if (e.message === "Can't wait without a fiber") {
                     return commandPromise
                 }
+                console.log(100, e.message)// @nocommit
+                executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
+                console.log('after afterCommand hook. e.wdioExceptionHandler set?', !!e.wdioExceptionHandler)
+                if (typeof e.wdioExceptionHandler === 'function') {
+                    return e.wdioExceptionHandler()
+                }
                 throw e
             }
         }
@@ -146,6 +152,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 futureFailed = true
                 return fn.apply(this, commandArgs)
             }
+            console.log(145, e.message)// @nocommit
             if (typeof e.wdioExceptionHandler === 'function') {
                 return e.wdioExceptionHandler()
             }
