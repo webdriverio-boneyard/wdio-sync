@@ -70,11 +70,10 @@ global.wdioSync = function (fn, done) {
  * wraps a function into a Fiber ready context to enable sync execution and hooks
  * @param  {Function}   fn             function to be executed
  * @param  {String}     commandName    name of that function
- * @param  {Function[]} beforeCommand  method to be executed before calling the actual function
- * @param  {Function[]} afterCommand   method to be executed after calling the actual function
+ * @param  {[Function[]]} commandHooks  hooks to run before/after commands, on command exceptions, etc.
  * @return {Function}   actual wrapped function
  */
-let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
+let wrapCommand = function (fn, commandName, commandHooks) {
     return function (...commandArgs) {
         let future = new Future()
         let futureFailed = false
@@ -100,7 +99,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 if (e.message === "Can't wait without a fiber") {
                     return commandPromise
                 }
-                executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
+                executeHooksWithArgs(commandHooks.onCommandException, [commandName, commandArgs, null, e])
                 if (typeof e.wdioExceptionHandler === 'function') {
                     return e.wdioExceptionHandler()
                 }
@@ -110,7 +109,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
 
         commandIsRunning = true
         let commandResult, commandError
-        new Promise((r) => r(executeHooksWithArgs(beforeCommand, [commandName, commandArgs])))
+        new Promise((r) => r(executeHooksWithArgs(commandHooks.beforeCommand, [commandName, commandArgs])))
             .then(() => {
                 /**
                  * actual function was already executed in desired catch block
@@ -124,11 +123,11 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
             .then(
                 (result) => {
                     commandResult = result
-                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, result])
+                    return executeHooksWithArgs(commandHooks.afterCommand, [commandName, commandArgs, result])
                 },
                 (e) => {
                     commandError = e
-                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
+                    return executeHooksWithArgs(commandHooks.afterCommand, [commandName, commandArgs, null, e])
                 }
             )
             .then(() => {
@@ -161,17 +160,16 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
 /**
  * wraps all WebdriverIO commands
  * @param  {Object}     instance       WebdriverIO client instance (browser)
- * @param  {Function[]} beforeCommand  before command hook
- * @param  {Function[]} afterCommand   after command hook
+ * @param  {[Function[]]} commandHooks  hooks to run before/after commands, on command exceptions, etc.
  */
-let wrapCommands = function (instance, beforeCommand, afterCommand) {
+let wrapCommands = function (instance, commandHooks) {
     Object.keys(Object.getPrototypeOf(instance)).forEach((commandName) => {
         if (SYNC_COMMANDS.indexOf(commandName) > -1) {
             return
         }
 
         let origFn = instance[commandName]
-        instance[commandName] = wrapCommand(origFn, commandName, beforeCommand, afterCommand)
+        instance[commandName] = wrapCommand(origFn, commandName, commandHooks)
     })
 
     /**
@@ -215,7 +213,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
                 let res = fn.apply(instance, args)
                 forcePromises = false
                 return res
-            }, commandName, beforeCommand, afterCommand)
+            }, commandName, commandHooks)
             return
         }
 
@@ -226,7 +224,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          */
         commandGroup[fnName] = wrapCommand((...args) => new Promise((r) => {
             wdioSync(fn, r).apply(instance, args)
-        }), commandName, beforeCommand, afterCommand)
+        }), commandName, commandHooks)
     }
 }
 
