@@ -149,6 +149,7 @@ let wrapCommand = function (fn, commandName, commandHooks) {
                 futureFailed = true
                 return fn.apply(this, commandArgs)
             }
+            executeHooksWithArgs(commandHooks.onCommandException, [commandName, commandArgs, null, e])
             if (typeof e.wdioExceptionHandler === 'function') {
                 return e.wdioExceptionHandler()
             }
