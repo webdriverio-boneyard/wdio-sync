@@ -266,19 +266,15 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
 
     let runHook = function (hookFn) {
         return origFn(function (done) {
-            Fiber(() => {
-                executeHooksWithArgs(before)
-                    .then(() => {
-                        return new Promise(resolve => {
-                            return Fiber(() => {
-                                hookFn.call(this)
-                                resolve()
-                            }).run()
-                        })
-                    })
-                    .then(() => executeHooksWithArgs(after))
-                    .then(() => done(), () => done())
-            }).run()
+            executeHooksWithArgs(before)
+                .then(() => new Promise((resolve) => {
+                    return Fiber(() => {
+                        hookFn.call(this)
+                        resolve()
+                    }).run()
+                }))
+                .then(() => executeHooksWithArgs(after))
+                .then(() => done(), () => done())
         })
     }
 
