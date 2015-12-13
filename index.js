@@ -14,7 +14,7 @@ let forcePromises = false
  * @param  {Object[]} args  list of parameter for hook functions
  * @return {Promise}  promise that gets resolved once all hooks finished running
  */
-let executeHooksWithArgs = (hooks, args) => {
+let executeHooksWithArgs = (hooks = [], args) => {
     /**
      * make sure hooks are an array of functions
      */
