@@ -53,6 +53,14 @@ describe('wdio-sync', () => {
                 e.message.should.be.equal('buu')
             }
         })
+
+        after(() => {
+            /**
+             * reset globals
+             */
+            WDIOSyncRewire.__Rewire__('commandIsRunning', false)
+            WDIOSyncRewire.__Rewire__('forcePromises', false)
+        })
     })
 
     describe('wdioSync', () => {
@@ -78,6 +86,10 @@ describe('wdio-sync', () => {
                 done()
             }).bind(null, 'done'))
             process.nextTick(() => FiberMock.callArg(0))
+        })
+
+        after(() => {
+            WDIOSyncRewire.__ResetDependency__('Fiber')
         })
     })
 })
