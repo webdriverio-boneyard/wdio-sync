@@ -48,13 +48,11 @@ module.exports = function (grunt) {
     })
 
     require('load-grunt-tasks')(grunt)
-    grunt.registerTask('default', ['build'])
+    grunt.registerTask('default', ['eslint', 'build', 'mocha_istanbul'])
     grunt.registerTask('build', 'Build wdio-sync', function () {
         grunt.task.run([
-            'eslint',
             'clean',
-            'babel',
-            'mocha_istanbul'
+            'babel'
         ])
     })
     grunt.registerTask('release', 'Bump and tag version', function (type) {
