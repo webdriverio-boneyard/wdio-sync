@@ -271,7 +271,7 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
             // framework hook functions should fail the test, so propagate those.
             executeHooksWithArgs(before)
                 .catch((e) => {
-                    console.log(`Error in beforeHook: [${e}]`)
+                    console.error(`Error in beforeHook: [${e}]`)
                 })
                 .then(() => new Promise((resolve, reject) => {
                     return Fiber(() => {
@@ -286,7 +286,7 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
                 .then(() => {
                     return executeHooksWithArgs(after)
                     .catch((e) => {
-                        console.log(`Error in afterHook: [${e}]`)
+                        console.error(`Error in afterHook: [${e}]`)
                     })
                 })
                 .then(() => done(), done)
