@@ -161,7 +161,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
  * @return {Object}          command result with enhanced prototype
  */
 let applyPrototype = function (result, newInstance) {
-    if (!result || typeof result !== 'object') {
+    if (!result || typeof result !== 'object' || Array.isArray(result)) {
         return result
     }
 
