@@ -1,5 +1,6 @@
 import Future from 'fibers/future'
 import Fiber from 'fibers'
+import assign from 'object.assign'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners',
@@ -106,6 +107,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
         }
 
         commandIsRunning = true
+        let newInstance = this
         let commandResult, commandError
         new Promise((r) => r(executeHooksWithArgs(beforeCommand, [commandName, commandArgs])))
             .then(() => {
@@ -116,7 +118,8 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                     return
                 }
 
-                return fn.apply(this, commandArgs)
+                newInstance = fn.apply(this, commandArgs)
+                return newInstance
             })
             .then(
                 (result) => {
@@ -134,7 +137,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 if (commandError) {
                     return future.throw(commandError)
                 }
-                return future.return(applyPrototype(this, commandResult))
+                return future.return(applyPrototype.call(this, commandResult, newInstance))
             })
 
         /**
@@ -154,20 +157,38 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
 
 /**
  * enhance result with instance prototype to enable command chaining
- * @param  {Ibject} instance WebdriverIO instance
- * @param  {[type]} result   command result
- * @return {[type]}          command result with enhanced prototype
+ * @param  {Object} result   command result
+ * @return {Object}          command result with enhanced prototype
  */
-let applyPrototype = function (instance, result) {
+let applyPrototype = function (result, newInstance) {
     if (!result || typeof result !== 'object') {
         return result
     }
 
-    for (let commandName of Object.keys(Object.getPrototypeOf(instance))) {
+    let prototype = {}
+    let hasExtendedPrototype = false
+    for (let commandName of Object.keys(Object.getPrototypeOf(this))) {
         if (result[commandName] || SYNC_COMMANDS.indexOf(commandName) > -1) {
             continue
         }
-        result[commandName] = instance[commandName].bind(instance)
+
+        newInstance.lastResult = result
+        prototype[commandName] = { value: this[commandName].bind(newInstance) }
+        hasExtendedPrototype = true
+    }
+
+    if (hasExtendedPrototype) {
+        let newResult = Object.create(result, prototype)
+
+        /**
+         * since status is a command we need to rename the property
+         */
+        if (typeof result.status !== 'undefined') {
+            result._status = result.status
+            delete result.status
+        }
+
+        result = assign(newResult, result)
     }
 
     return result
@@ -186,7 +207,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
         }
 
         let origFn = instance[commandName]
-        instance[commandName] = wrapCommand(origFn, commandName, beforeCommand, afterCommand)
+        instance[commandName] = wrapCommand.call(instance, origFn, commandName, beforeCommand, afterCommand)
     })
 
     /**
