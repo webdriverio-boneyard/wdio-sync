@@ -137,7 +137,8 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 if (commandError) {
                     return future.throw(commandError)
                 }
-                return future.return(applyPrototype.call(this, commandResult, newInstance))
+                wrapCommands(newInstance, beforeCommand, afterCommand)
+                return future.return(applyPrototype.call(newInstance, commandResult))
             })
 
         /**
@@ -160,7 +161,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
  * @param  {Object} result   command result
  * @return {Object}          command result with enhanced prototype
  */
-let applyPrototype = function (result, newInstance) {
+let applyPrototype = function (result) {
     if (!result || typeof result !== 'object' || Array.isArray(result)) {
         return result
     }
@@ -172,8 +173,8 @@ let applyPrototype = function (result, newInstance) {
             continue
         }
 
-        newInstance.lastResult = result
-        prototype[commandName] = { value: this[commandName].bind(newInstance) }
+        this.lastResult = result
+        prototype[commandName] = { value: this[commandName].bind(this) }
         hasExtendedPrototype = true
     }
 
