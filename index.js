@@ -10,6 +10,10 @@ let commandIsRunning = false
 let forcePromises = false
 
 let isAsync = function () {
+    if (!global.browser || !global.browser.options) {
+        return false
+    }
+
     return global.browser.options.sync === false
 }
 

@@ -54,13 +54,6 @@ describe('wrapCommand', () => {
         })
     })
 
-    it('should allow to chain objects', () => {
-        return run(() => {
-            instance.getObject().getInteger().should.be.equal(1)
-            instance.getObject().getString().should.be.equal('foo')
-        })
-    })
-
     it('should not allow to chain strings, integer or falsy values', () => {
         return run(() => {
             let check = instance.getInteger().getObject === undefined
