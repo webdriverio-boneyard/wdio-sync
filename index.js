@@ -365,7 +365,7 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
                 executeHooksWithArgs(before).catch((e) => {
                     console.error(`Error in beforeHook: [${e}]`)
                 }).then(() => {
-                    return origFn.call(this, hookFn)
+                    return hookFn.call(this)
                 }).then(() => {
                     return executeHooksWithArgs(after)
                     .catch((e) => {
