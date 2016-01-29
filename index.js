@@ -9,6 +9,10 @@ const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 
 let commandIsRunning = false
 let forcePromises = false
 
+let isAsync = function () {
+    return global.browser.options.sync === false
+}
+
 /**
  * helper method to execute a row of hooks with certain parameters
  * @param  {Function|Function[]} hooks  list of hooks
@@ -32,6 +36,17 @@ let executeHooksWithArgs = (hooks = [], args) => {
 
     hooks = hooks.map((hook) => new Promise((resolve) => {
         let _commandIsRunning = commandIsRunning
+
+        /**
+         * no need for fiber wrap in async mode
+         */
+        if (isAsync()) {
+            commandIsRunning = true
+            let result = resolve(hook.apply(null, args))
+            commandIsRunning = _commandIsRunning
+            return result
+        }
+
         try {
             /**
              * after command hooks require additional Fiber environment
@@ -68,10 +83,6 @@ global.wdioSync = function (fn, done) {
     }
 }
 
-let isAsync = function () {
-    return global.browser.options.sync === false
-}
-
 /**
  * wraps a function into a Fiber ready context to enable sync execution and hooks
  * @param  {Function}   fn             function to be executed
@@ -86,23 +97,39 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
          * async command wrap, enables beforeCommand and afterCommand
          */
         return function (...commandArgs) {
+            /**
+             * don't execute [before/after]Command hook if a command was executed
+             * in these hooks (otherwise we will get into an endless loop)
+             */
+            if (commandIsRunning) {
+                return fn.apply(this, commandArgs)
+            }
+
             let commandError, commandResult
-            return new Promise((resolve, reject) => {
-                return executeHooksWithArgs(beforeCommand, [commandName, commandArgs]).then(() => {
-                    return fn.apply(this, commandArgs)
-                }).then((result) => {
-                    commandResult = result
-                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, result])
-                }, (e) => {
-                    commandError = e
-                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
-                }).then(() => {
-                    if (commandError) {
-                        return reject(commandError)
+            commandIsRunning = true
+            return executeHooksWithArgs(beforeCommand, [commandName, commandArgs])
+                .then(
+                    () => {
+                        return fn.apply(this, commandArgs)
                     }
-                    return resolve(commandResult)
+                ).then(
+                    (result) => {
+                        commandResult = result
+                        return executeHooksWithArgs(afterCommand, [commandName, commandArgs, result])
+                    },
+                    (e) => {
+                        commandError = e
+                        return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
+                    }
+                ).then(() => {
+                    commandIsRunning = false
+
+                    if (commandError) {
+                        throw commandError
+                    }
+
+                    return commandResult
                 })
-            })
         }
     }
 
@@ -119,7 +146,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
 
         /**
          * don't execute [before/after]Command hook if a command was executed
-         * in these hooks
+         * in these hooks (otherwise we will get into an endless loop)
          */
         if (commandIsRunning) {
             let commandPromise = fn.apply(this, commandArgs)
@@ -330,7 +357,18 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
          * user wants handle async command using promises, no need to wrap in fiber context
          */
         if (isAsync()) {
-            return origFn.call(this, hookFn)
+            return origFn(function (done) {
+                executeHooksWithArgs(before).catch((e) => {
+                    console.error(`Error in beforeHook: [${e}]`)
+                }).then(() => {
+                    return origFn.call(this, hookFn)
+                }).then(() => {
+                    return executeHooksWithArgs(after)
+                    .catch((e) => {
+                        console.error(`Error in afterHook: [${e}]`)
+                    })
+                }).then(() => done(), done)
+            })
         }
 
         return origFn(function (done) {
