@@ -68,6 +68,10 @@ global.wdioSync = function (fn, done) {
     }
 }
 
+let isAsync = function () {
+    return global.browser.options.sync === false
+}
+
 /**
  * wraps a function into a Fiber ready context to enable sync execution and hooks
  * @param  {Function}   fn             function to be executed
@@ -77,6 +81,34 @@ global.wdioSync = function (fn, done) {
  * @return {Function}   actual wrapped function
  */
 let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
+    if (isAsync()) {
+        /**
+         * async command wrap, enables beforeCommand and afterCommand
+         */
+        return function (...commandArgs) {
+            let commandError, commandResult
+            return new Promise((resolve, reject) => {
+                return executeHooksWithArgs(beforeCommand, [commandName, commandArgs]).then(() => {
+                    return fn.apply(this, commandArgs)
+                }).then((result) => {
+                    commandResult = result
+                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, result])
+                }, (e) => {
+                    commandError = e
+                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
+                }).then(() => {
+                    if (commandError) {
+                        return reject(commandError)
+                    }
+                    return resolve(commandResult)
+                })
+            })
+        }
+    }
+
+    /**
+     * sync command wrap
+     */
     return function (...commandArgs) {
         let future = new Future()
         let futureFailed = false
@@ -278,6 +310,13 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
     let origFn = global[fnName]
 
     let runSpec = function (specTitle, specFn) {
+        /**
+         * user wants handle async command using promises, no need to wrap in fiber context
+         */
+        if (isAsync()) {
+            return origFn.call(this, specTitle, specFn)
+        }
+
         return origFn(specTitle, function (done) {
             Fiber(() => {
                 specFn.call(this)
@@ -287,6 +326,13 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
     }
 
     let runHook = function (hookFn) {
+        /**
+         * user wants handle async command using promises, no need to wrap in fiber context
+         */
+        if (isAsync()) {
+            return origFn.call(this, hookFn)
+        }
+
         return origFn(function (done) {
             // Print errors encountered in beforeHook and afterHook to console, but
             // don't propagate them to avoid failing the test. However, errors in
