@@ -307,12 +307,12 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
 
 /**
  * [runInFiberContext description]
- * @param  {[type]} testInterfaceFnName  global command that runs specs
+ * @param  {[type]} testInterfaceFnNames  global command that runs specs
  * @param  {[type]} before               before hook hook
  * @param  {[type]} after                after hook hook
  * @param  {[type]} fnName               test interface command to wrap
  */
-let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
+let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
     let origFn = global[fnName]
 
     let runSpec = function (specTitle, specFn) {
@@ -386,7 +386,7 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
             : (typeof specArguments[1] === 'function' ? specArguments.pop() : undefined)
         let specTitle = specArguments[0]
 
-        if (fnName === testInterfaceFnName) {
+        if (testInterfaceFnNames.includes(fnName)) {
             if (specFn) return runSpec(specTitle, specFn)
 
             /**
@@ -398,7 +398,7 @@ let runInFiberContext = function (testInterfaceFnName, before, after, fnName) {
         return runHook(specFn)
     }
 
-    if (fnName === testInterfaceFnName) {
+    if (testInterfaceFnNames.includes(fnName)) {
         global[fnName].skip = origFn.skip
         global[fnName].only = origFn.only
     }
