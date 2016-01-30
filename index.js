@@ -98,50 +98,10 @@ global.wdioSync = function (fn, done) {
 let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
     if (isAsync()) {
         /**
-         * async command wrap, enables beforeCommand and afterCommand
+         * async command wrap
          */
         return function (...commandArgs) {
-            /**
-             * don't execute [before/after]Command hook if a command was executed
-             * in these hooks (otherwise we will get into an endless loop)
-             */
-            if (commandIsRunning) {
-                return fn.apply(this, commandArgs)
-            }
-
-            /**
-             * we have to wrap the command execution within a custom command in order enable command hooks and
-             * to return the result as a WebdriverIO monad (otherwise we can't chain commands as we used to do)
-             */
-            let customCommandName = `__async_${commandName}`
-            this.addCommand(customCommandName, function () {
-                return executeHooksWithArgs(beforeCommand, [commandName, commandArgs]).then(
-                    () => fn.apply(this, commandArgs)
-                ).then(
-                    (result) => {
-                        commandResult = result
-                        return executeHooksWithArgs(afterCommand, [commandName, commandArgs, result])
-                    },
-                    (e) => {
-                        commandError = e
-                        return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
-                    }
-                ).then(() => {
-                    commandIsRunning = false
-
-                    if (commandError) {
-                        throw commandError
-                    }
-
-                    return commandResult
-                })
-            })
-
-            let commandError, commandResult
-            commandIsRunning = true
-            var result = this[customCommandName]()
-            delete this[customCommandName]
-            return result
+            return fn.apply(this, commandArgs)
         }
     }
 
