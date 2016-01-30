@@ -109,13 +109,14 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 return fn.apply(this, commandArgs)
             }
 
-            let commandError, commandResult
-            commandIsRunning = true
-            return executeHooksWithArgs(beforeCommand, [commandName, commandArgs])
-                .then(
-                    () => {
-                        return fn.apply(this, commandArgs)
-                    }
+            /**
+             * we have to wrap the command execution within a custom command in order enable command hooks and
+             * to return the result as a WebdriverIO monad (otherwise we can't chain commands as we used to do)
+             */
+            let customCommandName = `__async_${commandName}`
+            this.addCommand(customCommandName, function () {
+                return executeHooksWithArgs(beforeCommand, [commandName, commandArgs]).then(
+                    () => fn.apply(this, commandArgs)
                 ).then(
                     (result) => {
                         commandResult = result
@@ -134,6 +135,13 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
 
                     return commandResult
                 })
+            })
+
+            let commandError, commandResult
+            commandIsRunning = true
+            var result = this[customCommandName]()
+            delete this[customCommandName]
+            return result
         }
     }
 
@@ -273,6 +281,13 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
         let origFn = instance[commandName]
         instance[commandName] = wrapCommand.call(instance, origFn, commandName, beforeCommand, afterCommand)
     })
+
+    /**
+     * no need to overwrite addCommand in async mode
+     */
+    if (isAsync()) {
+        return
+    }
 
     /**
      * Adding a command within fiber context doesn't require a special routine
