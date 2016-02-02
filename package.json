@@ -1,5 +1,5 @@
 {
-  "name": "wdio-sync",
+  "name": "@georgecrawfordft/wdio-sync",
   "version": "0.4.6-0",
   "description": "A WebdriverIO plugin. Helper module to run WebdriverIO commands synchronously.",
   "main": "build/index.js",
