@@ -4,6 +4,7 @@
   "description": "A WebdriverIO plugin. Helper module to run WebdriverIO commands synchronously.",
   "main": "build/index.js",
   "scripts": {
+    "prepublish": "rm -r ./build && grunt",
     "test": "grunt"
   },
   "repository": {
