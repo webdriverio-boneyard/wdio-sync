@@ -386,7 +386,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
             : (typeof specArguments[1] === 'function' ? specArguments.pop() : undefined)
         let specTitle = specArguments[0]
 
-        if (testInterfaceFnNames.includes(fnName)) {
+        if (testInterfaceFnNames.indexOf(fnName) > -1) {
             if (specFn) return runSpec(specTitle, specFn)
 
             /**
@@ -398,7 +398,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
         return runHook(specFn)
     }
 
-    if (testInterfaceFnNames.includes(fnName)) {
+    if (testInterfaceFnNames.indexOf(fnName) > -1) {
         global[fnName].skip = origFn.skip
         global[fnName].only = origFn.only
     }
