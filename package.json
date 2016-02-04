@@ -6,7 +6,7 @@
   "scripts": {
     "build": "grunt",
     "test": "grunt mocha_istanbul",
-    "prepublish": "npm prune && npm run build && npm run test"
+    "prepublish": "npm prune && npm run build"
   },
   "repository": {
     "type": "git",
