@@ -1,6 +1,7 @@
 import Future from 'fibers/future'
 import Fiber from 'fibers'
 import assign from 'object.assign'
+import co from 'co'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners',
@@ -320,7 +321,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
          * user wants handle async command using promises, no need to wrap in fiber context
          */
         if (isAsync()) {
-            return origFn.call(this, specTitle, specFn)
+            return origFn.call(this, specTitle, co.wrap(specFn))
         }
 
         return origFn(specTitle, function (done) {
@@ -340,7 +341,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
                 executeHooksWithArgs(before).catch((e) => {
                     console.error(`Error in beforeHook: [${e}]`)
                 }).then(() => {
-                    return hookFn.call(this)
+                    return hookFn.call(co.wrap(this))
                 }).then(() => {
                     return executeHooksWithArgs(after)
                     .catch((e) => {
