@@ -329,7 +329,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
         /**
          * user wants handle async command using promises, no need to wrap in fiber context
          */
-        if (isAsync()) {
+        if (isAsync() || specFn.name === 'async') {
             return origFn.call(this, specTitle, specFn)
         }
 
@@ -345,7 +345,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
         /**
          * user wants handle async command using promises, no need to wrap in fiber context
          */
-        if (isAsync()) {
+        if (isAsync() || hookFn.name === 'async') {
             return origFn(function (done) {
                 executeHooksWithArgs(before).catch((e) => {
                     console.error(`Error in beforeHook: [${e}]`)
