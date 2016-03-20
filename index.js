@@ -233,6 +233,16 @@ let applyPrototype = function (result) {
  * @param  {Function[]} afterCommand   after command hook
  */
 let wrapCommands = function (instance, beforeCommand, afterCommand) {
+    /**
+     * if instance is a multibrowser instance make sure to wrap commands
+     * of its instances too
+     */
+    if (instance.isMultiremote) {
+        instance.getInstances().forEach((browserName) => {
+            wrapCommands(global[browserName], beforeCommand, afterCommand)
+        })
+    }
+
     Object.keys(Object.getPrototypeOf(instance)).forEach((commandName) => {
         if (SYNC_COMMANDS.indexOf(commandName) > -1) {
             return
