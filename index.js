@@ -264,7 +264,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
      * since everything runs sync. There is no need to promisify the command.
      */
     instance.addCommand = function (fnName, fn, forceOverwrite) {
-        let commandGroup = instance
+        let commandGroup = instance.getPrototype()
         let commandName = fnName
         let namespace
 
