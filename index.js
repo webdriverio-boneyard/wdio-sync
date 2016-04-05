@@ -316,79 +316,91 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
 }
 
 /**
- * [runInFiberContext description]
- * @param  {[type]} testInterfaceFnNames  global command that runs specs
- * @param  {[type]} before               before hook hook
- * @param  {[type]} after                after hook hook
- * @param  {[type]} fnName               test interface command to wrap
+ * runs a hook within fibers context (if function name is not async)
+ * it also executes before/after hook hook
+ *
+ * @param  {Function} hookFn function that was passed to the framework hook
+ * @param  {Function} origFn original framework hook function
+ * @return {Function}        wrapped framework hook function
  */
-let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
-    let origFn = global[fnName]
-
-    let runSpec = function (specTitle, specFn) {
-        /**
-         * user wants handle async command using promises, no need to wrap in fiber context
-         */
-        if (isAsync() || specFn.name === 'async') {
-            return origFn.call(this, specTitle, specFn)
-        }
-
-        return origFn(specTitle, function (done) {
-            Fiber(() => {
-                specFn.call(this)
-                done()
-            }).run()
-        })
-    }
-
-    let runHook = function (hookFn) {
-        /**
-         * user wants handle async command using promises, no need to wrap in fiber context
-         */
-        if (isAsync() || hookFn.name === 'async') {
-            return origFn(function (done) {
-                executeHooksWithArgs(before).catch((e) => {
-                    console.error(`Error in beforeHook: [${e}]`)
-                }).then(() => {
-                    return hookFn.call(this)
-                }).then(() => {
-                    return executeHooksWithArgs(after)
-                    .catch((e) => {
-                        console.error(`Error in afterHook: [${e}]`)
-                    })
-                }).then(() => done(), done)
-            })
-        }
-
+let runHook = function (hookFn, origFn, before, after) {
+    /**
+     * user wants handle async command using promises, no need to wrap in fiber context
+     */
+    if (isAsync() || hookFn.name === 'async') {
         return origFn(function (done) {
-            // Print errors encountered in beforeHook and afterHook to console, but
-            // don't propagate them to avoid failing the test. However, errors in
-            // framework hook functions should fail the test, so propagate those.
-            executeHooksWithArgs(before)
+            executeHooksWithArgs(before).catch((e) => {
+                console.error(`Error in beforeHook: [${e}]`)
+            }).then(() => {
+                return hookFn.call(this)
+            }).then(() => {
+                return executeHooksWithArgs(after)
                 .catch((e) => {
-                    console.error(`Error in beforeHook: [${e}]`)
+                    console.error(`Error in afterHook: [${e}]`)
                 })
-                .then(() => new Promise((resolve, reject) => {
-                    return Fiber(() => {
-                        try {
-                            hookFn.call(this)
-                        } catch (e) {
-                            reject(e)
-                        }
-                        resolve()
-                    }).run()
-                }))
-                .then(() => {
-                    return executeHooksWithArgs(after)
-                    .catch((e) => {
-                        console.error(`Error in afterHook: [${e}]`)
-                    })
-                })
-                .then(() => done(), done)
+            }).then(() => done(), done)
         })
     }
 
-    global[fnName] = function (...specArguments) {
+    return origFn(function (done) {
+        // Print errors encountered in beforeHook and afterHook to console, but
+        // don't propagate them to avoid failing the test. However, errors in
+        // framework hook functions should fail the test, so propagate those.
+        executeHooksWithArgs(before)
+            .catch((e) => {
+                console.error(`Error in beforeHook: [${e}]`)
+            })
+            .then(() => new Promise((resolve, reject) => {
+                return Fiber(() => {
+                    try {
+                        hookFn.call(this)
+                    } catch (e) {
+                        reject(e)
+                    }
+                    resolve()
+                }).run()
+            }))
+            .then(() => {
+                return executeHooksWithArgs(after)
+                .catch((e) => {
+                    console.error(`Error in afterHook: [${e}]`)
+                })
+            })
+            .then(() => done(), done)
+    })
+}
+
+/**
+ * runs a spec function (test function) within the fibers context
+ * @param  {string}   specTitle  test description
+ * @param  {Function} specFn     test function that got passed in from the user
+ * @param  {Function} origFn     original framework test function
+ * @return {Function}            wrapped test function
+ */
+let runSpec = function (specTitle, specFn, origFn) {
+    /**
+     * user wants handle async command using promises, no need to wrap in fiber context
+     */
+    if (isAsync() || specFn.name === 'async') {
+        return origFn.call(this, specTitle, specFn)
+    }
+
+    return origFn(specTitle, function (done) {
+        Fiber(() => {
+            specFn.call(this)
+            done()
+        }).run()
+    })
+}
+
+/**
+ * wraps hooks and test function of a framework within a fiber context
+ * @param  {Function} origFn               original framework function
+ * @param  {string[]} testInterfaceFnNames actual test functions for that framework
+ * @return {Function}                      wrapped test/hook function
+ */
+let wrapTestFunction = function (fnName, origFn, testInterfaceFnNames, before, after) {
+    return function (...specArguments) {
         /**
          * Variadic arguments: [title, fn], [title], [fn]
          */
@@ -397,7 +409,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
         let specTitle = specArguments[0]
 
         if (testInterfaceFnNames.indexOf(fnName) > -1) {
-            if (specFn) return runSpec(specTitle, specFn)
+            if (specFn) return runSpec(specTitle, specFn, origFn)
 
             /**
              * if specFn is undefined we are dealing with a pending function
@@ -405,12 +417,34 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
             return origFn(specTitle)
         }
 
-        return runHook(specFn)
+        return runHook(specFn, origFn, before, after)
+    }
+}
+
+/**
+ * [runInFiberContext description]
+ * @param  {[type]} testInterfaceFnNames  global command that runs specs
+ * @param  {[type]} before               before hook hook
+ * @param  {[type]} after                after hook hook
+ * @param  {[type]} fnName               test interface command to wrap
+ */
+let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
+    let origFn = global[fnName]
+    global[fnName] = wrapTestFunction(fnName, origFn, testInterfaceFnNames, before, after)
+
+    /**
+     * support it.skip for the Mocha framework
+     */
+    if (typeof origFn.skip === 'function') {
+        global[fnName].skip = origFn.skip
     }
 
-    if (testInterfaceFnNames.indexOf(fnName) > -1) {
-        global[fnName].skip = origFn.skip
-        global[fnName].only = origFn.only
+    /**
+     * wrap it.only for the Mocha framework
+     */
+    if (typeof origFn.only === 'function') {
+        let origOnlyFn = origFn.only
+        global[fnName].only = wrapTestFunction(fnName + '.only', origOnlyFn, testInterfaceFnNames, before, after)
     }
 }
 
