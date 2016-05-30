@@ -17,6 +17,37 @@ let isAsync = function () {
     return global.browser.options.sync === false
 }
 
+let sanitizeErrorMessage = function (e) {
+    let stack = e.stack.split(/\n/g)
+    let errorMsg = stack.shift()
+    let cwd = process.cwd()
+
+    /**
+     * filter out stack traces to wdio-sync and fibers
+     * and transform absolute path to relative
+     */
+    stack = stack.filter((e) => !e.match(/(wdio-sync\/(build\/index.js|node_modules\/fibers)|- - - - -)/g))
+    stack = stack.map((e) => '    ' + e.replace(cwd + '/', '').trim())
+
+    /**
+     * this is just an assumption but works in most cases
+     */
+    let errorLine = stack.shift().trim()
+
+    /**
+     * add back error message
+     */
+    stack.unshift(errorMsg)
+
+    /**
+     * correct error occurence
+     */
+    let lineToFix = stack[stack.length - 1]
+    stack[stack.length - 1] = lineToFix.slice(0, lineToFix.indexOf('index.js')) + errorLine
+
+    return stack.join('\n')
+}
+
 /**
  * helper method to execute a row of hooks with certain parameters
  * @param  {Function|Function[]} hooks  list of hooks
@@ -182,6 +213,8 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 futureFailed = true
                 return fn.apply(this, commandArgs)
             }
+
+            e.stack = sanitizeErrorMessage(e)
             throw e
         }
     }
