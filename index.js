@@ -316,80 +316,138 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
 }
 
 /**
+ * execute test or hook synchronously
+ * @param  {Function} fn         spec or hook method
+ * @param  {Function} resolve    marks test as successful
+ * @param  {Function} reject     marks test as unsuccessful
+ * @param  {Number}   repeatTest number of retries
+ * @return {Promise}             that gets resolved once test/hook is done or was retried enough
+ */
+let executeSync = function (fn, resolve, reject, repeatTest = 0) {
+    try {
+        fn.call(this)
+        resolve()
+    } catch (e) {
+        if (repeatTest) {
+            return executeSync(fn, resolve, reject, --repeatTest)
+        }
+
+        reject(e)
+    }
+}
+
+/**
+ * execute test or hook asynchronously
+ * @param  {Function} fn         spec or hook method
+ * @param  {Number}   repeatTest number of retries
+ * @return {Promise}             that gets resolved once test/hook is done or was retried enough
+ */
+let executeAsync = function (fn, repeatTest) {
+    let result, error
+    try {
+        result = fn.call(this)
+    } catch (e) {
+        error = e
+    } finally {
+        /**
+         * handle errors that get thrown directly and are not cause by
+         * rejected promises
+         */
+        if (error && repeatTest) {
+            return executeAsync(fn, --repeatTest)
+        }
+
+        /**
+         * if we don't retry just return result
+         */
+        if (repeatTest === 0 || !result || typeof result.catch !== 'function') {
+            return result
+        }
+
+        /**
+         * handle promise response
+         */
+        return result.catch((e) => {
+            if (repeatTest) {
+                return executeAsync(fn, --repeatTest)
+            }
+
+            return Promise.reject(e)
+        })
+    }
+}
+
+/**
+ * fails properly depending on framework
+ * @param  {Error}   e     error object
+ * @param  {Function} done callback (in jasmine done.fail to end a failing test)
+ */
+let fail = function (e, done) {
+    if (typeof done.fail === 'function') {
+        return done.fail(e)
+    }
+
+    return done(e)
+}
+
+/**
  * runs a hook within fibers context (if function name is not async)
  * it also executes before/after hook hook
  *
- * @param  {Function} hookFn function that was passed to the framework hook
- * @param  {Function} origFn original framework hook function
- * @return {Function}        wrapped framework hook function
+ * @param  {Function} hookFn      function that was passed to the framework hook
+ * @param  {Function} origFn      original framework hook function
+ * @param  {Function} before      before hook hook
+ * @param  {Function} after       after hook hook
+ * @param  {Number}   repeatTest  number of retries if hook fails
+ * @return {Function}             wrapped framework hook function
  */
-let runHook = function (hookFn, origFn, before, after) {
-    /**
-     * user wants handle async command using promises, no need to wrap in fiber context
-     */
-    if (isAsync() || hookFn.name === 'async') {
-        return origFn(function (done) {
-            executeHooksWithArgs(before).catch((e) => {
-                console.error(`Error in beforeHook: [${e}]`)
-            }).then(() => {
-                return hookFn.call(this)
-            }).then(() => {
-                return executeHooksWithArgs(after)
-                .catch((e) => {
-                    console.error(`Error in afterHook: [${e}]`)
-                })
-            }).then(() => done(), done)
-        })
-    }
-
+let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
     return origFn(function (done) {
         // Print errors encountered in beforeHook and afterHook to console, but
         // don't propagate them to avoid failing the test. However, errors in
         // framework hook functions should fail the test, so propagate those.
-        executeHooksWithArgs(before)
-            .catch((e) => {
-                console.error(`Error in beforeHook: [${e}]`)
+        executeHooksWithArgs(before).catch((e) => {
+            console.error(`Error in beforeHook: [${e}]`)
+        }).then(() => {
+            /**
+             * user wants handle async command using promises, no need to wrap in fiber context
+             */
+            if (isAsync() || hookFn.name === 'async') {
+                return executeAsync.call(this, hookFn, repeatTest)
+            }
+
+            return new Promise((resolve, reject) =>
+                Fiber(() => executeSync.call(this, hookFn, resolve, reject, repeatTest)).run()
+            )
+        }).then(() => {
+            return executeHooksWithArgs(after).catch((e) => {
+                console.error(`Error in afterHook: [${e}]`)
             })
-            .then(() => new Promise((resolve, reject) => {
-                return Fiber(() => {
-                    try {
-                        hookFn.call(this)
-                    } catch (e) {
-                        reject(e)
-                    }
-                    resolve()
-                }).run()
-            }))
-            .then(() => {
-                return executeHooksWithArgs(after)
-                .catch((e) => {
-                    console.error(`Error in afterHook: [${e}]`)
-                })
-            })
-            .then(() => done(), done)
+        }).then(() => done(), (e) => fail(e, done))
     })
 }
 
 /**
  * runs a spec function (test function) within the fibers context
- * @param  {string}   specTitle  test description
- * @param  {Function} specFn     test function that got passed in from the user
- * @param  {Function} origFn     original framework test function
- * @return {Function}            wrapped test function
+ * @param  {string}   specTitle   test description
+ * @param  {Function} specFn      test function that got passed in from the user
+ * @param  {Function} origFn      original framework test function
+ * @param  {Number}   repeatTest  number of retries if test fails
+ * @return {Function}             wrapped test function
  */
-let runSpec = function (specTitle, specFn, origFn) {
+let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
     /**
      * user wants handle async command using promises, no need to wrap in fiber context
      */
     if (isAsync() || specFn.name === 'async') {
-        return origFn.call(this, specTitle, specFn)
+        return origFn(specTitle, function () {
+            return executeAsync.call(this, specFn, repeatTest)
+        })
     }
 
-    return origFn(specTitle, function (done) {
-        Fiber(() => {
-            specFn.call(this)
-            done()
-        }).run()
+    return origFn(specTitle, function (resolve) {
+        let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
+        Fiber(() => executeSync.call(this, specFn, resolve, reject, repeatTest)).run()
     })
 }
 
@@ -402,14 +460,17 @@ let runSpec = function (specTitle, specFn, origFn) {
 let wrapTestFunction = function (fnName, origFn, testInterfaceFnNames, before, after) {
     return function (...specArguments) {
         /**
-         * Variadic arguments: [title, fn], [title], [fn]
+         * Variadic arguments:
+         * [title, fn], [title], [fn]
+         * [title, fn, retryCnt], [title, retryCnt], [fn, retryCnt]
          */
+        let retryCnt = typeof specArguments[specArguments.length - 1] === 'number' ? specArguments.pop() : 0
         let specFn = typeof specArguments[0] === 'function' ? specArguments.shift()
             : (typeof specArguments[1] === 'function' ? specArguments.pop() : undefined)
         let specTitle = specArguments[0]
 
         if (testInterfaceFnNames.indexOf(fnName) > -1) {
-            if (specFn) return runSpec(specTitle, specFn, origFn)
+            if (specFn) return runSpec(specTitle, specFn, origFn, retryCnt)
 
             /**
              * if specFn is undefined we are dealing with a pending function
@@ -417,7 +478,7 @@ let wrapTestFunction = function (fnName, origFn, testInterfaceFnNames, before, a
             return origFn(specTitle)
         }
 
-        return runHook(specFn, origFn, before, after)
+        return runHook(specFn, origFn, before, after, retryCnt)
     }
 }
 
