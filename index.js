@@ -356,13 +356,13 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
  * @param  {Number}   repeatTest number of retries
  * @return {Promise}             that gets resolved once test/hook is done or was retried enough
  */
-let executeSync = function (fn, resolve, reject, repeatTest = 0) {
+let executeSync = function (fn, resolve, reject, repeatTest = 0, args = []) {
     try {
-        fn.call(this)
+        fn.apply(this, args)
         resolve()
     } catch (e) {
         if (repeatTest) {
-            return executeSync(fn, resolve, reject, --repeatTest)
+            return executeSync(fn, resolve, reject, --repeatTest, args)
         }
 
         reject(e)
@@ -375,10 +375,10 @@ let executeSync = function (fn, resolve, reject, repeatTest = 0) {
  * @param  {Number}   repeatTest number of retries
  * @return {Promise}             that gets resolved once test/hook is done or was retried enough
  */
-let executeAsync = function (fn, repeatTest) {
+let executeAsync = function (fn, repeatTest = 0, args = []) {
     let result, error
     try {
-        result = fn.call(this)
+        result = fn.apply(this, args)
     } catch (e) {
         error = e
     } finally {
@@ -387,7 +387,7 @@ let executeAsync = function (fn, repeatTest) {
          * rejected promises
          */
         if (error && repeatTest) {
-            return executeAsync(fn, --repeatTest)
+            return executeAsync(fn, --repeatTest, args)
         }
 
         /**
@@ -402,7 +402,7 @@ let executeAsync = function (fn, repeatTest) {
          */
         return result.catch((e) => {
             if (repeatTest) {
-                return executeAsync(fn, --repeatTest)
+                return executeAsync(fn, --repeatTest, args)
             }
 
             return Promise.reject(e)
@@ -542,4 +542,4 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
     }
 }
 
-export { wrapCommand, wrapCommands, runInFiberContext, executeHooksWithArgs }
+export { wrapCommand, wrapCommands, runInFiberContext, executeHooksWithArgs, executeSync, executeAsync }
