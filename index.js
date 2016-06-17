@@ -389,9 +389,8 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
         if (error) {
             if (repeatTest) {
                 return executeAsync(fn, --repeatTest, args)
-            } else {
-                return new Promise((_, reject) => reject(result))
             }
+            return new Promise((_, reject) => reject(result))
         }
 
         /**
@@ -481,12 +480,12 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
             return executeAsync.call(this, specFn, repeatTest)
                .then(() => done(), (e) => fail(e, done))
         })
-    } else {
-        return origFn(specTitle, function (resolve) {
-            let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
-            Fiber(() => executeSync.call(this, specFn, resolve, reject, repeatTest)).run()
-        })
     }
+
+    return origFn(specTitle, function (resolve) {
+        let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
+        Fiber(() => executeSync.call(this, specFn, resolve, reject, repeatTest)).run()
+    })
 }
 
 /**
