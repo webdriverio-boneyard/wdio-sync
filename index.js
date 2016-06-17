@@ -386,15 +386,19 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
          * handle errors that get thrown directly and are not cause by
          * rejected promises
          */
-        if (error && repeatTest) {
-            return executeAsync(fn, --repeatTest, args)
+        if (error) {
+            if (repeatTest) {
+                return executeAsync(fn, --repeatTest, args)
+            } else {
+                return new Promise((_, reject) => reject(result))
+            }
         }
 
         /**
          * if we don't retry just return result
          */
         if (repeatTest === 0 || !result || typeof result.catch !== 'function') {
-            return result
+            return new Promise(resolve => resolve(result))
         }
 
         /**
@@ -473,15 +477,16 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
      * user wants handle async command using promises, no need to wrap in fiber context
      */
     if (isAsync() || specFn.name === 'async') {
-        return origFn(specTitle, function () {
+        return origFn(specTitle, function (done) {
             return executeAsync.call(this, specFn, repeatTest)
+               .then(() => done(), (e) => fail(e, done))
+        })
+    } else {
+        return origFn(specTitle, function (resolve) {
+            let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
+            Fiber(() => executeSync.call(this, specFn, resolve, reject, repeatTest)).run()
         })
     }
-
-    return origFn(specTitle, function (resolve) {
-        let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
-        Fiber(() => executeSync.call(this, specFn, resolve, reject, repeatTest)).run()
-    })
 }
 
 /**
