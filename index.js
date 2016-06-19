@@ -26,7 +26,7 @@ let sanitizeErrorMessage = function (e) {
      * filter out stack traces to wdio-sync and fibers
      * and transform absolute path to relative
      */
-    stack = stack.filter((e) => !e.match(/(wdio-sync\/(build\/index.js|node_modules\/fibers)|- - - - -)/g))
+    stack = stack.filter((e) => !e.match(/((wdio-sync\/)*(build\/index.js|node_modules\/fibers)|- - - - -)/g))
     stack = stack.map((e) => '    ' + e.replace(cwd + '/', '').trim())
 
     /**
@@ -35,15 +35,19 @@ let sanitizeErrorMessage = function (e) {
     let errorLine = stack.shift().trim()
 
     /**
-     * add back error message
-     */
-    stack.unshift(errorMsg)
-
-    /**
      * correct error occurence
      */
     let lineToFix = stack[stack.length - 1]
-    stack[stack.length - 1] = lineToFix.slice(0, lineToFix.indexOf('index.js')) + errorLine
+    if (lineToFix.indexOf('index.js')) {
+        stack[stack.length - 1] = lineToFix.slice(0, lineToFix.indexOf('index.js')) + errorLine
+    } else {
+        stack.unshift('    ' + errorLine)
+    }
+
+    /**
+     * add back error message
+     */
+    stack.unshift(errorMsg)
 
     return stack.join('\n')
 }
