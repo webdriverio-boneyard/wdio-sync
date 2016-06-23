@@ -38,7 +38,7 @@ let sanitizeErrorMessage = function (e) {
      * correct error occurence
      */
     let lineToFix = stack[stack.length - 1]
-    if (lineToFix.indexOf('index.js')) {
+    if (lineToFix.indexOf('index.js') > -1) {
         stack[stack.length - 1] = lineToFix.slice(0, lineToFix.indexOf('index.js')) + errorLine
     } else {
         stack.unshift('    ' + errorLine)
