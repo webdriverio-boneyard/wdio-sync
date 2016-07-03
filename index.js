@@ -394,7 +394,7 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
             if (repeatTest) {
                 return executeAsync(fn, --repeatTest, args)
             }
-            return new Promise((_, reject) => reject(result))
+            return new Promise((_, reject) => reject(error))
         }
 
         /**

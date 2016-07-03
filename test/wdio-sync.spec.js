@@ -2,7 +2,7 @@ import sinon from 'sinon'
 import {
     // wrapCommand,
     // wrapCommands,
-    // runInFiberContext,
+    runInFiberContext,
     executeHooksWithArgs,
     __RewireAPI__ as WDIOSyncRewire
 } from '../'
@@ -43,15 +43,19 @@ describe('wdio-sync', () => {
             result[0].should.be.equal('done')
         })
 
-        it('should reject if hook throws', async () => {
+        it('should reject if hook returns rejected promise', async () => {
             let hookReject = () => new Promise((resolve, reject) => reject(new Error('buu')))
-            let hookThrows = () => { throw new Error('buu') }
             try {
-                await executeHooksWithArgs([hookReject, hookThrows])
+                await executeHooksWithArgs(hookReject)
                 throw new Error('should never get thrown')
             } catch (e) {
                 e.message.should.be.equal('buu')
             }
+        })
+
+        it('should should skip immediate errors in hooks', async () => {
+            let hookThrows = () => { throw new Error('buu') }
+            await executeHooksWithArgs(hookThrows)
         })
 
         after(() => {
@@ -90,6 +94,35 @@ describe('wdio-sync', () => {
 
         after(() => {
             WDIOSyncRewire.__ResetDependency__('Fiber')
+        })
+    })
+
+    describe('runInFiberContext', () => {
+        beforeEach(() => {
+            global.fakeBefore = (cb) => new Promise((resolve, reject) => {
+                cb((error) => error ? reject(error) : resolve())
+            })
+        })
+
+        afterEach(() => {
+            delete global.fakeBefore
+        })
+
+        it('should run function in fiber context', () => {
+            runInFiberContext(['it'], [], [], 'fakeBefore')
+            fakeBefore(function async () {}) // eslint-disable-line no-undef
+        })
+
+        it('should pass synchronous error from fiber context', async () => {
+            let error
+            runInFiberContext(['it'], [], [], 'fakeBefore')
+            try {
+                await fakeBefore(function async () { throw new Error('buu') }) // eslint-disable-line no-undef
+            } catch (e) {
+                console.log(e)
+                error = e
+            }
+            error.message.should.be.equal('buu')
         })
     })
 })
