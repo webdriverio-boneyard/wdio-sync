@@ -362,18 +362,20 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
  * @param  {Number}   repeatTest number of retries
  * @return {Promise}             that gets resolved once test/hook is done or was retried enough
  */
-let executeSync = function (fn, resolve, reject, repeatTest = 0, args = []) {
-    try {
-        fn.apply(this, args)
-        resolve()
-    } catch (e) {
-        if (repeatTest) {
-            return executeSync(fn, resolve, reject, --repeatTest, args)
-        }
+let executeSync = function (fn, repeatTest = 0, args = []) {
+    return new Promise((resolve, reject) => {
+        try {
+            const res = fn.apply(this, args)
+            resolve(res)
+        } catch (e) {
+            if (repeatTest) {
+                return executeSync(fn, --repeatTest, args)
+            }
 
-        e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
-        reject(e)
-    }
+            e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
+            reject(e)
+        }
+    })
 }
 
 /**
@@ -467,7 +469,7 @@ let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
             }
 
             return new Promise((resolve, reject) =>
-                Fiber(() => executeSync.call(this, hookFn, resolve, reject, repeatTest)).run()
+                Fiber(() => executeSync.call(this, hookFn, repeatTest).then(() => resolve(), reject)).run()
             )
         }).then(() => {
             return executeHooksWithArgs(after).catch((e) => {
@@ -510,7 +512,7 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
         commandIsRunning = false
 
         let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
-        Fiber(() => executeSync.call(this, specFn, resolve, reject, repeatTest)).run()
+        Fiber(() => executeSync.call(this, specFn, repeatTest).then(() => resolve(), reject)).run()
     })
 }
 
