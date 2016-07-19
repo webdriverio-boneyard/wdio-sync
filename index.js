@@ -6,6 +6,8 @@ const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners',
     'getMaxListeners', 'listenerCount']
 
+const STACKTRACE_FILTER = /((wdio-sync\/)*(build\/index.js|node_modules\/fibers)|- - - - -)/g
+
 let commandIsRunning = false
 let forcePromises = false
 
@@ -26,7 +28,7 @@ let sanitizeErrorMessage = function (e) {
      * filter out stack traces to wdio-sync and fibers
      * and transform absolute path to relative
      */
-    stack = stack.filter((e) => !e.match(/((wdio-sync\/)*(build\/index.js|node_modules\/fibers)|- - - - -)/g))
+    stack = stack.filter((e) => !e.match(STACKTRACE_FILTER))
     stack = stack.map((e) => '    ' + e.replace(cwd + '/', '').trim())
 
     /**
@@ -369,6 +371,7 @@ let executeSync = function (fn, resolve, reject, repeatTest = 0, args = []) {
             return executeSync(fn, resolve, reject, --repeatTest, args)
         }
 
+        e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
         reject(e)
     }
 }
@@ -412,6 +415,7 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
                 return executeAsync(fn, --repeatTest, args)
             }
 
+            e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
             return Promise.reject(e)
         })
     }
