@@ -357,8 +357,6 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
 /**
  * execute test or hook synchronously
  * @param  {Function} fn         spec or hook method
- * @param  {Function} resolve    marks test as successful
- * @param  {Function} reject     marks test as unsuccessful
  * @param  {Number}   repeatTest number of retries
  * @return {Promise}             that gets resolved once test/hook is done or was retried enough
  */
@@ -369,7 +367,7 @@ let executeSync = function (fn, repeatTest = 0, args = []) {
             resolve(res)
         } catch (e) {
             if (repeatTest) {
-                return executeSync(fn, --repeatTest, args)
+                return resolve(executeSync(fn, --repeatTest, args))
             }
 
             e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
