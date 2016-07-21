@@ -1,6 +1,7 @@
 import Future from 'fibers/future'
 import Fiber from 'fibers'
 import assign from 'object.assign'
+import 'promise.prototype.finally'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners',
@@ -177,29 +178,22 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
         commandIsRunning = true
         let newInstance = this
         let commandResult, commandError
-        new Promise((r) => r(executeHooksWithArgs(beforeCommand, [commandName, commandArgs])))
-            .then(() => {
-                /**
-                 * actual function was already executed in desired catch block
-                 */
-                if (futureFailed) {
-                    return
-                }
+        executeHooksWithArgs(beforeCommand, [commandName, commandArgs]).finally(() => {
+            /**
+             * actual function was already executed in desired catch block
+             */
+            if (futureFailed) {
+                return
+            }
 
-                newInstance = fn.apply(this, commandArgs)
-                return newInstance
-            })
-            .then(
-                (result) => {
-                    commandResult = result
-                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, result])
-                },
-                (e) => {
-                    commandError = e
-                    return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
-                }
-            )
-            .then(() => {
+            newInstance = fn.apply(this, commandArgs)
+            return newInstance.then((result) => {
+                commandResult = result
+                return executeHooksWithArgs(afterCommand, [commandName, commandArgs, result])
+            }, (e) => {
+                commandError = e
+                return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
+            }).finally(() => {
                 commandIsRunning = false
 
                 if (commandError) {
@@ -208,6 +202,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 wrapCommands(newInstance, beforeCommand, afterCommand)
                 return future.return(applyPrototype.call(newInstance, commandResult))
             })
+        })
 
         /**
          * try to execute with Fibers and fall back if can't
@@ -457,7 +452,7 @@ let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
         // don't propagate them to avoid failing the test. However, errors in
         // framework hook functions should fail the test, so propagate those.
         executeHooksWithArgs(before).catch((e) => {
-            console.error(`Error in beforeHook: [${e}]`)
+            console.error(`Error in beforeHook: ${e.stack}`)
         }).then(() => {
             /**
              * user wants handle async command using promises, no need to wrap in fiber context
@@ -471,7 +466,7 @@ let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
             )
         }).then(() => {
             return executeHooksWithArgs(after).catch((e) => {
-                console.error(`Error in afterHook: [${e}]`)
+                console.error(`Error in afterHook: ${e.stack}`)
             })
         }).then(() => done(), (e) => fail(e, done))
     })
