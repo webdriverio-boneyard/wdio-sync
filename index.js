@@ -5,7 +5,7 @@ import 'promise.prototype.finally'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners',
-    'getMaxListeners', 'listenerCount']
+    'getMaxListeners', 'listenerCount', 'getPrototype']
 
 const STACKTRACE_FILTER = /((wdio-sync\/)*(build\/index.js|node_modules\/fibers)|- - - - -)/g
 
