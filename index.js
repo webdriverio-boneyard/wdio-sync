@@ -356,6 +356,12 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
  * @return {Promise}             that gets resolved once test/hook is done or was retried enough
  */
 let executeSync = function (fn, repeatTest = 0, args = []) {
+    /**
+     * if a new hook gets executed we can assume that all commands should have finised
+     * with exception of timeouts where `commandIsRunning` will never be reset but here
+     */
+    commandIsRunning = false
+
     return new Promise((resolve, reject) => {
         try {
             const res = fn.apply(this, args)
@@ -379,6 +385,13 @@ let executeSync = function (fn, repeatTest = 0, args = []) {
  */
 let executeAsync = function (fn, repeatTest = 0, args = []) {
     let result, error
+
+    /**
+     * if a new hook gets executed we can assume that all commands should have finised
+     * with exception of timeouts where `commandIsRunning` will never be reset but here
+     */
+    commandIsRunning = false
+
     try {
         result = fn.apply(this, args)
     } catch (e) {
@@ -442,12 +455,6 @@ let fail = function (e, done) {
  */
 let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
     return origFn(function (done) {
-        /**
-         * if a new hook gets executed we can assume that all commands should have finised
-         * with exception of timeouts where `commandIsRunning` will never be reset but here
-         */
-        commandIsRunning = false
-
         // Print errors encountered in beforeHook and afterHook to console, but
         // don't propagate them to avoid failing the test. However, errors in
         // framework hook functions should fail the test, so propagate those.
@@ -486,24 +493,12 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
      */
     if (isAsync() || specFn.name === 'async') {
         return origFn(specTitle, function (done) {
-            /**
-             * if a new spec gets executed we can assume that all commands should have finised
-             * with exception of timeouts where `commandIsRunning` will never be reset but here
-             */
-            commandIsRunning = false
-
             return executeAsync.call(this, specFn, repeatTest)
                .then(() => done(), (e) => fail(e, done))
         })
     }
 
     return origFn(specTitle, function (resolve) {
-        /**
-         * if a new spec gets executed we can assume that all commands should have finised
-         * with exception of timeouts where `commandIsRunning` will never be reset but here
-         */
-        commandIsRunning = false
-
         let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
         Fiber(() => executeSync.call(this, specFn, repeatTest).then(() => resolve(), reject)).run()
     })
