@@ -43,19 +43,46 @@ describe('wdio-sync', () => {
             result[0].should.be.equal('done')
         })
 
-        it('should reject if hook returns rejected promise', async () => {
-            let hookReject = () => new Promise((resolve, reject) => reject(new Error('buu')))
-            try {
-                await executeHooksWithArgs(hookReject)
-                throw new Error('should never get thrown')
-            } catch (e) {
-                e.message.should.be.equal('buu')
-            }
-        })
+        describe('error handling', () => {
+            describe('sync', () => {
+                before(() => {
+                    global.browser = { options: { sync: true } }
+                })
 
-        it('should should skip immediate errors in hooks', async () => {
-            let hookThrows = () => { throw new Error('buu') }
-            await executeHooksWithArgs(hookThrows)
+                it('should skip if hook returns rejected promise', async () => {
+                    let hookReject = () => new Promise((resolve, reject) => reject(new Error('buu')))
+                    const res = await executeHooksWithArgs(hookReject)
+                    res[0].should.be.an.instanceOf(Error)
+                    res[0].message.should.be.equal('buu')
+                })
+
+                it('should skip immediate errors in hooks', async () => {
+                    let hookThrows = () => { throw new Error('buu') }
+                    const res = await executeHooksWithArgs(hookThrows)
+                    res[0].should.be.an.instanceOf(Error)
+                    res[0].message.should.be.equal('buu')
+                })
+
+                after(() => {
+                    delete global.browser
+                })
+            })
+
+            describe('async', () => {
+                it('should skip if hook returns rejected promise', async () => {
+                    let hookReject = () => new Promise((resolve, reject) => reject(new Error('buu')))
+                    const res = await executeHooksWithArgs(hookReject)
+                    res[0].should.be.an.instanceOf(Error)
+                    res[0].message.should.be.equal('buu')
+                })
+
+                it('should skip immediate errors in hooks', async () => {
+                    let hookThrows = () => { throw new Error('buu') }
+                    const res = await executeHooksWithArgs(hookThrows)
+                    res[0].should.be.an.instanceOf(Error)
+                    res[0].message.should.be.equal('buu')
+                })
+            })
         })
 
         after(() => {

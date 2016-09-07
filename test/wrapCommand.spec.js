@@ -40,6 +40,7 @@ let run = (fn) => {
 describe('wrapCommand', () => {
     before(() => {
         instance = new WebdriverIO()
+        global.browser = { options: { sync: true } }
         wrapCommands(instance, NOOP, NOOP)
     })
 
@@ -65,5 +66,9 @@ describe('wrapCommand', () => {
             check = instance.getUndefined === undefined
             check.should.be.true
         })
+    })
+
+    after(() => {
+        delete global.browser
     })
 })

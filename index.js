@@ -1,7 +1,6 @@
 import Future from 'fibers/future'
 import Fiber from 'fibers'
 import assign from 'object.assign'
-import 'promise.prototype.finally'
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners',
@@ -14,7 +13,7 @@ let forcePromises = false
 
 let isAsync = function () {
     if (!global.browser || !global.browser.options) {
-        return false
+        return true
     }
 
     return global.browser.options.sync === false
@@ -56,7 +55,10 @@ let sanitizeErrorMessage = function (e) {
 }
 
 /**
- * helper method to execute a row of hooks with certain parameters
+ * Helper method to execute a row of hooks with certain parameters.
+ * It will return with a reject promise due to a design decision to not let hooks/service intefer the
+ * actual test process.
+ *
  * @param  {Function|Function[]} hooks  list of hooks
  * @param  {Object[]} args  list of parameter for hook functions
  * @return {Promise}  promise that gets resolved once all hooks finished running
@@ -78,31 +80,41 @@ let executeHooksWithArgs = (hooks = [], args) => {
 
     hooks = hooks.map((hook) => new Promise((resolve) => {
         let _commandIsRunning = commandIsRunning
+        let result
+
+        const execHook = () => {
+            commandIsRunning = true
+
+            try {
+                result = hook.apply(null, args)
+            } catch (e) {
+                console.error(e.stack)
+                return resolve(e)
+            }
+
+            commandIsRunning = _commandIsRunning
+            if (result && typeof result.then === 'function') {
+                result.then(resolve, (e) => {
+                    console.error(e.stack)
+                    resolve(e)
+                })
+                return
+            }
+
+            resolve(result)
+        }
 
         /**
          * no need for fiber wrap in async mode
          */
         if (isAsync()) {
-            commandIsRunning = true
-            let result = resolve(hook.apply(null, args))
-            commandIsRunning = _commandIsRunning
-            return result
+            return execHook()
         }
 
-        try {
-            /**
-             * after command hooks require additional Fiber environment
-             */
-            return Fiber(() => {
-                commandIsRunning = true
-                resolve(hook.apply(null, args))
-                commandIsRunning = _commandIsRunning
-            }).run()
-        } catch (e) {
-            console.error(e.stack)
-        }
-
-        resolve()
+        /**
+         * after command hooks require additional Fiber environment
+         */
+        return Fiber(execHook).run()
     }))
 
     return Promise.all(hooks)
@@ -178,7 +190,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
         commandIsRunning = true
         let newInstance = this
         let commandResult, commandError
-        executeHooksWithArgs(beforeCommand, [commandName, commandArgs]).finally(() => {
+        executeHooksWithArgs(beforeCommand, [commandName, commandArgs]).then(() => {
             /**
              * actual function was already executed in desired catch block
              */
@@ -193,7 +205,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
             }, (e) => {
                 commandError = e
                 return executeHooksWithArgs(afterCommand, [commandName, commandArgs, null, e])
-            }).finally(() => {
+            }).then(() => {
                 commandIsRunning = false
 
                 if (commandError) {
