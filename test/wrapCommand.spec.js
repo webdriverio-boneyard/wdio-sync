@@ -17,6 +17,9 @@ WebdriverIO.prototype = {
     }),
     getNull: (ms = 50) => new Promise((r) => {
         setTimeout(() => r(null), ms)
+    }),
+    waitUntilSync: (fn) => new Promise((r) => {
+        return wdioSync(fn, r)()
     })
 }
 
@@ -65,6 +68,19 @@ describe('wrapCommand', () => {
             check.should.be.true
             check = instance.getUndefined === undefined
             check.should.be.true
+        })
+    })
+
+    it('should propagate prototype for passed in function results', () => {
+        return run(() => {
+            instance.waitUntilSync(() => {
+                instance.getString().should.be.equal('foo',
+                    'waitUntil commands are not getting synchronised')
+                instance.getObject().getString().should.be.equal('foo',
+                    'waitUntil commands do not get enhanced prototype')
+                return instance.getObject()
+            }).getString().should.be.equal('foo',
+                'waitUntil does not return enhanced prototype')
         })
     })
 
