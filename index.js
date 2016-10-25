@@ -285,6 +285,8 @@ let applyPrototype = function (result) {
  * @param  {Function[]} afterCommand   after command hook
  */
 let wrapCommands = function (instance, beforeCommand, afterCommand) {
+    const addCommand = instance.addCommand
+
     /**
      * if instance is a multibrowser instance make sure to wrap commands
      * of its instances too
@@ -347,13 +349,12 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * use bare promises to handle asynchronicity
          */
         if (fn.name === 'async') {
-            commandGroup[fnName] = wrapCommand((...args) => {
+            return addCommand(fnName, wrapCommand((...args) => {
                 forcePromises = true
                 let res = fn.apply(instance, args)
                 forcePromises = false
                 return res
-            }, commandName, beforeCommand, afterCommand)
-            return
+            }, commandName, beforeCommand, afterCommand), forceOverwrite)
         }
 
         /**
