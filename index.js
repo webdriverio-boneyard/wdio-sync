@@ -245,7 +245,10 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
  * @return {Object}          command result with enhanced prototype
  */
 let applyPrototype = function (result) {
-    if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    /**
+     * don't overload result for none objects, arrays and buffer
+     */
+    if (!result || typeof result !== 'object' || Array.isArray(result) || Buffer.isBuffer(result)) {
         return result
     }
 
