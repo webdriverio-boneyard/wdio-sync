@@ -345,16 +345,21 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
         }
 
         /**
-         * if method name is async the user specifies that he wants to
-         * use bare promises to handle asynchronicity
+         * If method name is async the user specifies that he wants to use bare promises to handle asynchronicity.
+         * First use native addCommand in order to be able to chain with other native commands, then wrap new
+         * command again to run it synchronous in the test method.
+         * This will allow us to run async custom commands within sync custom commands in a sync way.
          */
         if (fn.name === 'async') {
-            return addCommand(fnName, wrapCommand((...args) => {
+            addCommand(fnName, function (...args) {
+                const state = forcePromises
                 forcePromises = true
                 let res = fn.apply(instance, args)
-                forcePromises = false
+                forcePromises = state
                 return res
-            }, commandName, beforeCommand, afterCommand), forceOverwrite)
+            }, forceOverwrite)
+            commandGroup[fnName] = wrapCommand.call(commandGroup, commandGroup[fnName], fnName, beforeCommand, afterCommand)
+            return
         }
 
         /**
@@ -363,7 +368,10 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * #functionalProgrammingWTF!
          */
         commandGroup[fnName] = wrapCommand((...args) => new Promise((r) => {
+            const state = forcePromises
+            forcePromises = false
             wdioSync(fn, r).apply(instance, args)
+            forcePromises = state
         }), commandName, beforeCommand, afterCommand)
     }
 }
