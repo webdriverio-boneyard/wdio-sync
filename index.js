@@ -90,9 +90,9 @@ let executeHooksWithArgs = (hooks = [], args) => {
             } catch (e) {
                 console.error(e.stack)
                 return resolve(e)
+            } finally {
+                commandIsRunning = _commandIsRunning
             }
-
-            commandIsRunning = _commandIsRunning
             if (result && typeof result.then === 'function') {
                 result.then(resolve, (e) => {
                     console.error(e.stack)
