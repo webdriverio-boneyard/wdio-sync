@@ -522,13 +522,19 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
      * user wants handle async command using promises, no need to wrap in fiber context
      */
     if (isAsync() || specFn.name === 'async') {
-        return origFn(specTitle, function (done) {
+        return origFn(specTitle, function () {
             return executeAsync.call(this, specFn, repeatTest)
-               .then(() => done(), (e) => fail(e, done))
         })
     }
 
     return origFn(specTitle, function (resolve) {
+        /**
+         * if already in fibers context no need to wrap it again (mocha only)
+         */
+        if (typeof resolve !== 'function') {
+            return executeSync.call(this, specFn, repeatTest)
+        }
+
         let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
         Fiber(() => executeSync.call(this, specFn, repeatTest).then(() => resolve(), reject)).run()
     })
