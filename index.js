@@ -94,11 +94,10 @@ let executeHooksWithArgs = (hooks = [], args) => {
                 commandIsRunning = _commandIsRunning
             }
             if (result && typeof result.then === 'function') {
-                result.then(resolve, (e) => {
+                return result.then(resolve, (e) => {
                     console.error(e.stack)
                     resolve(e)
                 })
-                return
             }
 
             resolve(result)
@@ -469,19 +468,6 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
 }
 
 /**
- * fails properly depending on framework
- * @param  {Error}   e     error object
- * @param  {Function} done callback (in jasmine done.fail to end a failing test)
- */
-let fail = function (e, done) {
-    if (typeof done.fail === 'function') {
-        return done.fail(e)
-    }
-
-    return done(e)
-}
-
-/**
  * runs a hook within fibers context (if function name is not async)
  * it also executes before/after hook hook
  *
@@ -493,11 +479,11 @@ let fail = function (e, done) {
  * @return {Function}             wrapped framework hook function
  */
 let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
-    return origFn(function (done) {
+    return origFn(function () {
         // Print errors encountered in beforeHook and afterHook to console, but
         // don't propagate them to avoid failing the test. However, errors in
         // framework hook functions should fail the test, so propagate those.
-        executeHooksWithArgs(before).catch((e) => {
+        return executeHooksWithArgs(before).catch((e) => {
             console.error(`Error in beforeHook: ${e.stack}`)
         }).then(() => {
             /**
@@ -514,7 +500,7 @@ let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
             return executeHooksWithArgs(after).catch((e) => {
                 console.error(`Error in afterHook: ${e.stack}`)
             })
-        }).then(() => done(), (e) => fail(e, done))
+        })
     })
 }
 
@@ -536,16 +522,10 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
         })
     }
 
-    return origFn(specTitle, function (resolve) {
-        /**
-         * if already in fibers context no need to wrap it again (mocha only)
-         */
-        if (typeof resolve !== 'function') {
-            return executeSync.call(this, specFn, repeatTest)
-        }
-
-        let reject = typeof resolve.fail === 'function' ? resolve.fail : resolve
-        Fiber(() => executeSync.call(this, specFn, repeatTest).then(() => resolve(), reject)).run()
+    return origFn(specTitle, function () {
+        return new Promise((resolve, reject) =>
+            Fiber(() => executeSync.call(this, specFn, repeatTest).then(() => resolve(), reject)).run()
+        )
     })
 }
 
