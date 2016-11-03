@@ -126,9 +126,7 @@ describe('wdio-sync', () => {
 
     describe('runInFiberContext', () => {
         beforeEach(() => {
-            global.fakeBefore = (cb) => new Promise((resolve, reject) => {
-                cb((error) => error ? reject(error) : resolve())
-            })
+            global.fakeBefore = (cb) => cb()
         })
 
         afterEach(() => {
