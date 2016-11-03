@@ -401,8 +401,17 @@ let executeSync = function (fn, repeatTest = 0, args = []) {
                 return resolve(executeSync(fn, --repeatTest, args))
             }
 
-            e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
-            reject(e)
+            /**
+             * make sure we got an error
+             * (not the case if someone does `throw 'message'`)
+             */
+            let error = e
+            if (!Boolean(e instanceof Error)) {
+                error = new Error(e)
+            }
+
+            error.stack = error.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
+            reject(error)
         }
     })
 }
