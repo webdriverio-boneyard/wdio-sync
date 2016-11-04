@@ -541,7 +541,7 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
      * user wants handle async command using promises, no need to wrap in fiber context
      */
     if (isAsync() || specFn.name === 'async') {
-        return origFn(specTitle, function () {
+        return origFn(specTitle, function async () {
             return executeAsync.call(this, specFn, repeatTest)
         })
     }
