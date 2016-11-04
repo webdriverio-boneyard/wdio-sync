@@ -1,6 +1,6 @@
 {
   "name": "wdio-sync",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "A WebdriverIO plugin. Helper module to run WebdriverIO commands synchronously.",
   "main": "build/index.js",
   "scripts": {
