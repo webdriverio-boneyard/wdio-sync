@@ -240,14 +240,32 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
 
 /**
  * enhance result with instance prototype to enable command chaining
- * @param  {Object} result   command result
- * @return {Object}          command result with enhanced prototype
+ * @param  {Object} result       command result
+ * @param  {Object} helperScope  instance scope with prototype of already wrapped commands
+ * @return {Object}              command result with enhanced prototype
  */
-let applyPrototype = function (result) {
+let applyPrototype = function (result, helperScope) {
     /**
      * don't overload result for none objects, arrays and buffer
      */
     if (!result || typeof result !== 'object' || Array.isArray(result) || Buffer.isBuffer(result)) {
+        return result
+    }
+
+    /**
+     * overload elements results
+     */
+    if (typeof result.selector === 'string' && Array.isArray(result.value) && typeof result.value[0].ELEMENT !== undefined) {
+        result.value = result.value.map((el, i) => {
+            el.selector = result.selector
+            el.value = { ELEMENT: el.ELEMENT }
+            el.index = i
+            delete el.ELEMENT
+            return el
+        }).map((el) => {
+            let newInstance = Object.setPrototypeOf(Object.create(el), Object.getPrototypeOf(this))
+            return applyPrototype.call(newInstance, el, this)
+        })
         return result
     }
 
@@ -259,7 +277,13 @@ let applyPrototype = function (result) {
         }
 
         this.lastResult = result
-        prototype[commandName] = { value: this[commandName].bind(this) }
+
+        /**
+         * Prefer the helperScope if given which is only the case when we overload elements result.
+         * We can't use the `this` prototype because its methods are not wrapped and command results
+         * wouldn't be fiberised
+         */
+        prototype[commandName] = { value: (helperScope || this)[commandName].bind(this) }
         hasExtendedPrototype = true
     }
 
