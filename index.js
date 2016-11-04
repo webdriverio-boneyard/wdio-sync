@@ -425,16 +425,14 @@ let executeSync = function (fn, repeatTest = 0, args = []) {
             }
 
             /**
-             * make sure we got an error
-             * (not the case if someone does `throw 'message'`)
+             * no need to modify stack if no stack available
              */
-            let error = e
-            if (!Boolean(e instanceof Error)) {
-                error = new Error(e)
+            if (!e.stack) {
+                return reject(e)
             }
 
-            error.stack = error.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
-            reject(error)
+            e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
+            reject(e)
         }
     })
 }
