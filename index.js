@@ -260,7 +260,6 @@ let applyPrototype = function (result, helperScope) {
             el.selector = result.selector
             el.value = { ELEMENT: el.ELEMENT }
             el.index = i
-            delete el.ELEMENT
             return el
         }).map((el) => {
             let newInstance = Object.setPrototypeOf(Object.create(el), Object.getPrototypeOf(this))
