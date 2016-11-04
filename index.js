@@ -255,7 +255,7 @@ let applyPrototype = function (result, helperScope) {
     /**
      * overload elements results
      */
-    if (typeof result.selector === 'string' && Array.isArray(result.value) && typeof result.value[0].ELEMENT !== undefined) {
+    if (typeof result.selector === 'string' && Array.isArray(result.value) && result.value.length && typeof result.value[0].ELEMENT !== undefined) {
         result.value = result.value.map((el, i) => {
             el.selector = result.selector
             el.value = { ELEMENT: el.ELEMENT }
@@ -265,7 +265,6 @@ let applyPrototype = function (result, helperScope) {
             let newInstance = Object.setPrototypeOf(Object.create(el), Object.getPrototypeOf(this))
             return applyPrototype.call(newInstance, el, this)
         })
-        return result
     }
 
     let prototype = {}
