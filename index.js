@@ -238,6 +238,18 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
     }
 }
 
+let isElementsResult = function (result) {
+    return (
+        typeof result.selector === 'string' &&
+        Array.isArray(result.value) && result.value.length &&
+        typeof result.value[0].ELEMENT !== undefined
+    )
+}
+
+let is$$Result = function (result) {
+    return Array.isArray(result) && result.length && result[0].ELEMENT !== undefined
+}
+
 /**
  * enhance result with instance prototype to enable command chaining
  * @param  {Object} result       command result
@@ -248,20 +260,30 @@ let applyPrototype = function (result, helperScope) {
     /**
      * don't overload result for none objects, arrays and buffer
      */
-    if (!result || typeof result !== 'object' || Array.isArray(result) || Buffer.isBuffer(result)) {
+    if (!result || typeof result !== 'object' || (Array.isArray(result) && !isElementsResult(result) && !(is$$Result(result))) || Buffer.isBuffer(result)) {
         return result
     }
 
     /**
      * overload elements results
      */
-    if (typeof result.selector === 'string' && Array.isArray(result.value) && result.value.length && typeof result.value[0].ELEMENT !== undefined) {
+    if (isElementsResult(result)) {
         result.value = result.value.map((el, i) => {
             el.selector = result.selector
             el.value = { ELEMENT: el.ELEMENT }
             el.index = i
             return el
         }).map((el) => {
+            let newInstance = Object.setPrototypeOf(Object.create(el), Object.getPrototypeOf(this))
+            return applyPrototype.call(newInstance, el, this)
+        })
+    }
+
+    /**
+     * overload $$ result
+     */
+    if (is$$Result(result)) {
+        return result.map((el) => {
             let newInstance = Object.setPrototypeOf(Object.create(el), Object.getPrototypeOf(this))
             return applyPrototype.call(newInstance, el, this)
         })
