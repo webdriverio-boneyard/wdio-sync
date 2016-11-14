@@ -194,6 +194,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
 
         commandIsRunning = true
         let newInstance = this
+        let lastCommandResult = this.lastResult
         let commandResult, commandError
         executeHooksWithArgs(beforeCommand, [commandName, commandArgs]).then(() => {
             /**
@@ -217,6 +218,14 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                     return future.throw(commandError)
                 }
                 wrapCommands(newInstance, beforeCommand, afterCommand)
+
+                /**
+                 * reset lastResult for all element calls within waitUntil/waitFor commands
+                 */
+                if (commandName.match(/^(waitUntil|waitFor)/i)) {
+                    this.lastResult = lastCommandResult
+                }
+
                 return future.return(applyPrototype.call(newInstance, commandResult))
             })
         })
