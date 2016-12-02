@@ -192,7 +192,14 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
             }
         }
 
-        commandIsRunning = true
+        /**
+         * handle waitUntil functions like usual sequences to prevent propagating
+         * lastResults between single calls
+         */
+        if (commandName !== 'waitUntil') {
+            commandIsRunning = true
+        }
+
         let newInstance = this
         let lastCommandResult = this.lastResult
         let commandResult, commandError
