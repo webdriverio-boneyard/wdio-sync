@@ -429,12 +429,14 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * finished once the Fiber wrapped custom function has finished
          * #functionalProgrammingWTF!
          */
-        commandGroup[fnName] = wrapCommand((...args) => new Promise((r) => {
-            const state = forcePromises
-            forcePromises = false
-            wdioSync(fn, r).apply(instance, args)
-            forcePromises = state
-        }), commandName, beforeCommand, afterCommand)
+        commandGroup[fnName] = wrapCommand(function (...args) {
+            return new Promise((r) => {
+                const state = forcePromises
+                forcePromises = false
+                wdioSync(fn, r).apply(this, args)
+                forcePromises = state
+            })
+        }, commandName, beforeCommand, afterCommand)
     }
 }
 
