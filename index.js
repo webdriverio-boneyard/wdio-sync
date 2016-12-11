@@ -173,6 +173,13 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
             let commandPromise = fn.apply(this, commandArgs)
 
             /**
+             * if commandPromise is actually not a promise just return result
+             */
+            if (typeof commandPromise.then !== 'function') {
+                return commandPromise
+            }
+
+            /**
              * Try to execute with Fibers and fall back if can't.
              * This part is executed when we want to set a fiber context within a command (e.g. in waitUntil).
              */
