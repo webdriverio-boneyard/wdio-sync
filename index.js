@@ -193,10 +193,10 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
         }
 
         /**
-         * handle waitUntil functions like usual sequences to prevent propagating
-         * lastResults between single calls
+         * commands that get executed during waitUntil and debug (repl mode) should always
+         * handled synchronously, therefor prevent propagating lastResults between single calls
          */
-        if (commandName !== 'waitUntil') {
+        if (commandName !== 'waitUntil' && commandName !== 'debug') {
             commandIsRunning = true
         }
 
