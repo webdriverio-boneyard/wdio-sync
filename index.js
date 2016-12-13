@@ -234,6 +234,13 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 wrapCommands(newInstance, beforeCommand, afterCommand)
 
                 /**
+                 * don't modify call result prototype
+                 */
+                if (commandName === 'call') {
+                    return future.return(commandResult)
+                }
+
+                /**
                  * reset lastResult for all element calls within waitUntil/waitFor commands
                  */
                 if (commandName.match(/^(waitUntil|waitFor)/i)) {
