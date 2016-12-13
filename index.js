@@ -236,7 +236,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
                 /**
                  * don't modify call result prototype
                  */
-                if (commandName === 'call') {
+                if (commandName === 'call' || commandName === 'reload') {
                     return future.return(commandResult)
                 }
 
