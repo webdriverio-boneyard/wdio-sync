@@ -277,7 +277,9 @@ let isElementsResult = function (result) {
 }
 
 let is$$Result = function (result) {
-    return Array.isArray(result) && result.length && result[0].ELEMENT !== undefined
+    // Commands like getAttribute can return an array of null when the attribute
+    // is not set.
+    return Array.isArray(result) && result.length && result[0] && result[0].ELEMENT !== undefined
 }
 
 /**

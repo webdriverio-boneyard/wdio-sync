@@ -18,6 +18,9 @@ WebdriverIO.prototype = {
     getNull: (ms = 50) => new Promise((r) => {
         setTimeout(() => r(null), ms)
     }),
+    getNulls: (ms = 50) => new Promise((r) => {
+        setTimeout(() => r([null, null]), ms)
+    }),
     waitUntilSync: (fn) => new Promise((r) => {
         return wdioSync(fn, r)()
     })
@@ -81,6 +84,12 @@ describe('wrapCommand', () => {
                 return instance.getObject()
             }).getString().should.be.equal('foo',
                 'waitUntil does not return enhanced prototype')
+        })
+    })
+
+    it('should not treat an array of null as a $$ result', () => {
+        return run(() => {
+            instance.getNulls().should.be.deepEqual([null, null])
         })
     })
 
