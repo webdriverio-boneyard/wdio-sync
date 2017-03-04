@@ -1,6 +1,6 @@
 import Future from 'fibers/future'
-import Fiber from 'fibers'
 import assign from 'object.assign'
+const Fiber = require('fibers') // ToDo fix unit test to work with imports
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
     'addListener', 'on', 'once', 'removeListener', 'removeAllListeners', 'listeners',
