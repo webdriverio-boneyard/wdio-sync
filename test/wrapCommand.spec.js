@@ -64,9 +64,9 @@ describe('wrapCommand', () => {
             check.should.be.true()
             check = instance.getString().getObject === undefined
             check.should.be.true()
-            check = instance.getNull === null
+            check = instance.getNull() === null
             check.should.be.true()
-            check = instance.getUndefined === undefined
+            check = instance.getUndefined() === undefined
             check.should.be.true()
         })
     })
