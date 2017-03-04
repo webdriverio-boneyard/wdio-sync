@@ -26,7 +26,7 @@
   },
   "homepage": "https://github.com/webdriverio/wdio-sync#readme",
   "dependencies": {
-    "fibers": "^1.0.9",
+    "fibers": "^1.0.15",
     "object.assign": "^4.0.3"
   },
   "devDependencies": {
