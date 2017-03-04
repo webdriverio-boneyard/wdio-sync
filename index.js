@@ -272,7 +272,7 @@ let isElementsResult = function (result) {
     return (
         typeof result.selector === 'string' &&
         Array.isArray(result.value) && result.value.length &&
-        typeof result.value[0].ELEMENT !== undefined
+        typeof result.value[0].ELEMENT !== 'undefined'
     )
 }
 
@@ -444,10 +444,10 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
          * #functionalProgrammingWTF!
          */
         commandGroup[fnName] = wrapCommand(function (...args) {
-            return new Promise((r) => {
+            return new Promise((resolve) => {
                 const state = forcePromises
                 forcePromises = false
-                wdioSync(fn, r).apply(this, args)
+                wdioSync(fn, resolve).apply(this, args)
                 forcePromises = state
             })
         }, commandName, beforeCommand, afterCommand)
@@ -508,37 +508,37 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
         result = fn.apply(this, args)
     } catch (e) {
         error = e
-    } finally {
-        /**
-         * handle errors that get thrown directly and are not cause by
-         * rejected promises
-         */
-        if (error) {
-            if (repeatTest) {
-                return executeAsync(fn, --repeatTest, args)
-            }
-            return new Promise((_, reject) => reject(error))
-        }
-
-        /**
-         * if we don't retry just return result
-         */
-        if (repeatTest === 0 || !result || typeof result.catch !== 'function') {
-            return new Promise(resolve => resolve(result))
-        }
-
-        /**
-         * handle promise response
-         */
-        return result.catch((e) => {
-            if (repeatTest) {
-                return executeAsync(fn, --repeatTest, args)
-            }
-
-            e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
-            return Promise.reject(e)
-        })
     }
+
+    /**
+     * handle errors that get thrown directly and are not cause by
+     * rejected promises
+     */
+    if (error) {
+        if (repeatTest) {
+            return executeAsync(fn, --repeatTest, args)
+        }
+        return new Promise((resolve, reject) => reject(error))
+    }
+
+    /**
+     * if we don't retry just return result
+     */
+    if (repeatTest === 0 || !result || typeof result.catch !== 'function') {
+        return new Promise(resolve => resolve(result))
+    }
+
+    /**
+     * handle promise response
+     */
+    return result.catch((e) => {
+        if (repeatTest) {
+            return executeAsync(fn, --repeatTest, args)
+        }
+
+        e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
+        return Promise.reject(e)
+    })
 }
 
 /**

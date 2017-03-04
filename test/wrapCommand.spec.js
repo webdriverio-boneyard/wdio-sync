@@ -3,23 +3,23 @@ import Fiber from 'fibers'
 
 const WebdriverIO = class {}
 WebdriverIO.prototype = {
-    getString: (a) => new Promise((r) => {
-        setTimeout(() => r('foo'), 50)
+    getString: (a) => new Promise((resolve) => {
+        setTimeout(() => resolve('foo'), 50)
     }),
-    getInteger: (ms = 50) => new Promise((r) => {
-        setTimeout(() => r(1), ms)
+    getInteger: (ms = 50) => new Promise((resolve) => {
+        setTimeout(() => resolve(1), ms)
     }),
-    getObject: (ms = 50) => new Promise((r) => {
-        setTimeout(() => r({}), ms)
+    getObject: (ms = 50) => new Promise((resolve) => {
+        setTimeout(() => resolve({}), ms)
     }),
-    getUndefined: (ms = 50) => new Promise((r) => {
-        setTimeout(() => r(), ms)
+    getUndefined: (ms = 50) => new Promise((resolve) => {
+        setTimeout(() => resolve(), ms)
     }),
-    getNull: (ms = 50) => new Promise((r) => {
-        setTimeout(() => r(null), ms)
+    getNull: (ms = 50) => new Promise((resolve) => {
+        setTimeout(() => resolve(null), ms)
     }),
-    waitUntilSync: (fn) => new Promise((r) => {
-        return wdioSync(fn, r)()
+    waitUntilSync: (fn) => new Promise((resolve) => {
+        return wdioSync(fn, resolve)()
     })
 }
 
@@ -54,20 +54,20 @@ describe('wrapCommand', () => {
             let result = typeof instance.getUndefined()
             result.should.be.equal('undefined')
             result = instance.getNull() === null
-            result.should.be.true
+            result.should.be.true()
         })
     })
 
     it('should not allow to chain strings, integer or falsy values', () => {
         return run(() => {
             let check = instance.getInteger().getObject === undefined
-            check.should.be.true
+            check.should.be.true()
             check = instance.getString().getObject === undefined
-            check.should.be.true
+            check.should.be.true()
             check = instance.getNull === null
-            check.should.be.true
+            check.should.be.true()
             check = instance.getUndefined === undefined
-            check.should.be.true
+            check.should.be.true()
         })
     })
 
