@@ -7,6 +7,7 @@ const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 
     'getMaxListeners', 'listenerCount', 'getPrototype']
 
 const STACKTRACE_FILTER = /((wdio-sync\/)*(build\/index.js|node_modules\/fibers)|- - - - -)/g
+const STACKTRACE_FILTER_FN = (e) => !e.match(STACKTRACE_FILTER)
 
 let commandIsRunning = false
 let forcePromises = false
@@ -28,7 +29,7 @@ let sanitizeErrorMessage = function (e) {
      * filter out stack traces to wdio-sync and fibers
      * and transform absolute path to relative
      */
-    stack = stack.filter((e) => !e.match(STACKTRACE_FILTER))
+    stack = stack.filter(STACKTRACE_FILTER_FN)
     stack = stack.map((e) => '    ' + e.replace(cwd + '/', '').trim())
 
     /**
@@ -294,6 +295,11 @@ let applyPrototype = function (result, helperScope) {
         return result
     }
 
+    const mapPrototype = (el) => {
+        let newInstance = Object.setPrototypeOf(Object.create(el), Object.getPrototypeOf(this))
+        return applyPrototype.call(newInstance, el, this)
+    }
+
     /**
      * overload elements results
      */
@@ -303,20 +309,14 @@ let applyPrototype = function (result, helperScope) {
             el.value = { ELEMENT: el.ELEMENT }
             el.index = i
             return el
-        }).map((el) => {
-            let newInstance = Object.setPrototypeOf(Object.create(el), Object.getPrototypeOf(this))
-            return applyPrototype.call(newInstance, el, this)
-        })
+        }).map(mapPrototype)
     }
 
     /**
      * overload $$ result
      */
     if (is$$Result(result)) {
-        return result.map((el) => {
-            let newInstance = Object.setPrototypeOf(Object.create(el), Object.getPrototypeOf(this))
-            return applyPrototype.call(newInstance, el, this)
-        })
+        return result.map(mapPrototype)
     }
 
     let prototype = {}
@@ -483,7 +483,7 @@ let executeSync = function (fn, repeatTest = 0, args = []) {
                 return reject(e)
             }
 
-            e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
+            e.stack = e.stack.split('\n').filter(STACKTRACE_FILTER_FN).join('\n')
             reject(e)
         }
     })
@@ -536,7 +536,7 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
             return executeAsync(fn, --repeatTest, args)
         }
 
-        e.stack = e.stack.split('\n').filter((e) => !e.match(STACKTRACE_FILTER)).join('\n')
+        e.stack = e.stack.split('\n').filter(STACKTRACE_FILTER_FN).join('\n')
         return Promise.reject(e)
     })
 }
