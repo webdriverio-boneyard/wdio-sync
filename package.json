@@ -13,10 +13,10 @@
     "compile": "babel index.js --out-dir build/",
     "eslint": "eslint ./index.js test/",
     "test": "run-s eslint test:unit",
-    "test:ci": "run-s eslint test:cover",
+    "test:ci": "run-s clean eslint test:cover",
     "test:unit": "mocha --compilers js:babel-core/register --colors --require should --reporter dot test/**/*.js",
     "test:cover": "babel-node ./node_modules/.bin/isparta cover --include './*.js' _mocha -- --require should",
-    "prepublish": "npm prune",
+    "prepublish": "npm prune && run-s build test",
     "watch": "npm run compile -- --watch"
   },
   "repository": {
