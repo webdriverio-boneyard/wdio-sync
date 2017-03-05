@@ -567,7 +567,7 @@ let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
                 return executeAsync.call(this, hookFn, repeatTest)
             }
 
-            return new Promise(runSync.bind(this, hookFn, repeatTest))
+            return new Promise(runSync.call(this, hookFn, repeatTest))
         }).then(() => {
             return executeHooksWithArgs(after).catch(hookError('afterHook'))
         })
@@ -593,7 +593,7 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
     }
 
     return origFn(specTitle, function () {
-        return new Promise(runSync.bind(this, specFn, repeatTest))
+        return new Promise(runSync.call(this, specFn, repeatTest))
     })
 }
 
