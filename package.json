@@ -9,7 +9,7 @@
     "bump:patch": "np patch",
     "bump:minor": "np minor",
     "bump:major": "np major",
-    "clean": "rm -rf ./build",
+    "clean": "rm -rf ./build ./coverage",
     "compile": "babel index.js --out-dir build/",
     "eslint": "eslint ./index.js test/",
     "test": "run-s eslint test:unit",
