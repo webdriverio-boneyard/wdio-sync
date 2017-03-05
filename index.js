@@ -65,6 +65,7 @@ let sanitizeErrorMessage = function (e) {
  * @return {Promise}  promise that gets resolved once all hooks finished running
  */
 let executeHooksWithArgs = (hooks = [], args) => {
+    console.log('---> test')
     /**
      * make sure hooks are an array of functions
      */
