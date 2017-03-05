@@ -37,6 +37,7 @@
   },
   "homepage": "https://github.com/webdriverio/wdio-sync#readme",
   "dependencies": {
+    "babel-runtime": "6.23.0",
     "fibers": "^1.0.15",
     "object.assign": "^4.0.3"
   },
@@ -67,7 +68,6 @@
     "eslint-plugin-promise": "3.5.0",
     "eslint-plugin-standard": "2.1.1",
     "isparta": "4.0.0",
-    "load-grunt-tasks": "3.5.2",
     "mocha": "3.2.0",
     "np": "2.12.0",
     "npm-run-all": "4.0.2",
