@@ -65,7 +65,6 @@ let sanitizeErrorMessage = function (e) {
  * @return {Promise}  promise that gets resolved once all hooks finished running
  */
 let executeHooksWithArgs = (hooks = [], args) => {
-    console.log('---> test')
     /**
      * make sure hooks are an array of functions
      */
@@ -126,7 +125,7 @@ let executeHooksWithArgs = (hooks = [], args) => {
  * @param  {Function} fn  function to wrap around
  * @return {Function}     wrapped around function
  */
-global.wdioSync = function (fn, done) {
+let wdioSync = global.wdioSync = function (fn, done) {
     return function (...args) {
         return Fiber(() => {
             const result = fn.apply(this, args)
@@ -664,4 +663,12 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
     }
 }
 
-export { wrapCommand, wrapCommands, runInFiberContext, executeHooksWithArgs, executeSync, executeAsync }
+export {
+    wrapCommand,
+    wrapCommands,
+    runInFiberContext,
+    executeHooksWithArgs,
+    executeSync,
+    executeAsync,
+    wdioSync
+}

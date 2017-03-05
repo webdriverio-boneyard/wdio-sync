@@ -1,10 +1,16 @@
 {
   "extends": "standard",
-  "rules": {
-    "indent": [2, 4]
-  },
+  "plugins": [
+    "mocha"
+  ],
   "parser": "babel-eslint",
-  "globals": {
-    "wdioSync": true
+  "rules": {
+    "indent": [2, 4],
+
+    /* Mocha */
+    "mocha/no-exclusive-tests": [2],
+    "mocha/no-pending-tests": [2],
+    "mocha/handle-done-callback": [2],
+    "mocha/no-global-tests": [2],
   }
 }

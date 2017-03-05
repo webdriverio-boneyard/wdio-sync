@@ -1,4 +1,4 @@
-import { wrapCommands } from '../'
+import { wrapCommands, wdioSync } from '../'
 import Fiber from 'fibers'
 
 const WebdriverIO = class {}

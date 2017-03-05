@@ -1,7 +1,6 @@
 import sinon from 'sinon'
 import {
-    // wrapCommand,
-    // wrapCommands,
+    wdioSync,
     runInFiberContext,
     executeHooksWithArgs,
     __RewireAPI__ as WDIOSyncRewire
@@ -106,7 +105,7 @@ describe('wdio-sync', () => {
         })
 
         it('should be registered globally', () => {
-            (!!wdioSync).should.be.true()
+            (Boolean(global.wdioSync)).should.be.true()
         })
 
         it('should initiate Fiber context', (done) => {
