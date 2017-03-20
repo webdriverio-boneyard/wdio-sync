@@ -1,6 +1,8 @@
 wdio-sync
 =========
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/webdriverio/wdio-sync.svg)](https://greenkeeper.io/)
+
 [![Build Status](https://travis-ci.org/webdriverio/wdio-sync.svg?branch=master)](https://travis-ci.org/webdriverio/wdio-sync) [![Code Climate](https://codeclimate.com/github/webdriverio/wdio-sync/badges/gpa.svg)](https://codeclimate.com/github/webdriverio/wdio-sync) [![Test Coverage](https://codeclimate.com/github/webdriverio/wdio-sync/badges/coverage.svg)](https://codeclimate.com/github/webdriverio/wdio-sync/coverage) [![Dependency Status](https://www.versioneye.com/user/projects/58ba933101b5b7004a7b5b8d/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/58ba933101b5b7004a7b5b8d)
 
 ***
