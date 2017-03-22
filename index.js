@@ -278,7 +278,7 @@ let isElementsResult = function (result) {
 }
 
 let is$$Result = function (result) {
-    return Array.isArray(result) && result.length && result[0].ELEMENT !== undefined
+    return Array.isArray(result) && result.length && result[0] && result[0].ELEMENT !== undefined
 }
 
 /**
