@@ -1,5 +1,8 @@
 import Future from 'fibers/future'
 import assign from 'object.assign'
+
+import { is$$, isElements } from './lib/results'
+
 const Fiber = require('fibers') // ToDo fix unit test to work with imports
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
@@ -269,18 +272,6 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
     }
 }
 
-let isElementsResult = function (result) {
-    return (
-        typeof result.selector === 'string' &&
-        Array.isArray(result.value) && result.value.length &&
-        typeof result.value[0].ELEMENT !== 'undefined'
-    )
-}
-
-let is$$Result = function (result) {
-    return Array.isArray(result) && result.length && result[0] && result[0].ELEMENT !== undefined
-}
-
 /**
  * enhance result with instance prototype to enable command chaining
  * @param  {Object} result       command result
@@ -291,7 +282,7 @@ let applyPrototype = function (result, helperScope) {
     /**
      * don't overload result for none objects, arrays and buffer
      */
-    if (!result || typeof result !== 'object' || (Array.isArray(result) && !isElementsResult(result) && !(is$$Result(result))) || Buffer.isBuffer(result)) {
+    if (!result || typeof result !== 'object' || (Array.isArray(result) && !isElements(result) && !(is$$(result))) || Buffer.isBuffer(result)) {
         return result
     }
 
@@ -303,7 +294,7 @@ let applyPrototype = function (result, helperScope) {
     /**
      * overload elements results
      */
-    if (isElementsResult(result)) {
+    if (isElements(result)) {
         result.value = result.value.map((el, i) => {
             el.selector = result.selector
             el.value = { ELEMENT: el.ELEMENT }
@@ -315,7 +306,7 @@ let applyPrototype = function (result, helperScope) {
     /**
      * overload $$ result
      */
-    if (is$$Result(result)) {
+    if (is$$(result)) {
         return result.map(mapPrototype)
     }
 
