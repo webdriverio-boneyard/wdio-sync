@@ -148,5 +148,24 @@ describe('wdio-sync', () => {
             }
             error.message.should.be.equal('buu')
         })
+
+        it('should replace original function in global scope', () => {
+            const origFakeBefore = global.fakeBefore
+            runInFiberContext(['it'], [], [], 'fakeBefore')
+            global.fakeBefore.should.not.equal(origFakeBefore)
+        })
+
+        it('should replace original function in custom scope', () => {
+            const scope = { fakeAfter: (cb) => cb() }
+
+            const origFakeBefore = global.fakeBefore
+            const origFakeAfter = scope.fakeAfter
+
+            runInFiberContext(['it'], [], [], 'fakeAfter', scope)
+
+            global.fakeBefore.should.equal(origFakeBefore)
+            global.should.not.have.property('fakeAfter')
+            scope.fakeAfter.should.not.equal(origFakeAfter)
+        })
     })
 })
