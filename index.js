@@ -58,6 +58,12 @@ let sanitizeErrorMessage = function (e) {
     return stack.join('\n')
 }
 
+// filter out arguments passed to specFn & hookFn, don't allow callbacks
+// as there is no need for user to call e.g. `done()`
+let filterSpecArgs = function (args) {
+    return args.filter((arg) => typeof arg !== 'function')
+}
+
 /**
  * Helper method to execute a row of hooks with certain parameters.
  * It will return with a reject promise due to a design decision to not let hooks/service intefer the
@@ -546,7 +552,7 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
 let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
     const hookError = (hookName) => (e) => console.error(`Error in ${hookName}: ${e.stack}`)
 
-    return origFn(function () {
+    return origFn(function (...hookArgs) {
         // Print errors encountered in beforeHook and afterHook to console, but
         // don't propagate them to avoid failing the test. However, errors in
         // framework hook functions should fail the test, so propagate those.
@@ -555,10 +561,10 @@ let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
              * user wants handle async command using promises, no need to wrap in fiber context
              */
             if (isAsync() || hookFn.name === 'async') {
-                return executeAsync.call(this, hookFn, repeatTest)
+                return executeAsync.call(this, hookFn, repeatTest, filterSpecArgs(hookArgs))
             }
 
-            return new Promise(runSync.call(this, hookFn, repeatTest))
+            return new Promise(runSync.call(this, hookFn, repeatTest, filterSpecArgs(hookArgs)))
         }).then(() => {
             return executeHooksWithArgs(after).catch(hookError('afterHook'))
         })
@@ -578,22 +584,22 @@ let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
      * user wants handle async command using promises, no need to wrap in fiber context
      */
     if (isAsync() || specFn.name === 'async') {
-        return origFn(specTitle, function async () {
-            return executeAsync.call(this, specFn, repeatTest)
+        return origFn(specTitle, function async (...specArgs) {
+            return executeAsync.call(this, specFn, repeatTest, filterSpecArgs(specArgs))
         })
     }
 
-    return origFn(specTitle, function () {
-        return new Promise(runSync.call(this, specFn, repeatTest))
+    return origFn(specTitle, function (...specArgs) {
+        return new Promise(runSync.call(this, specFn, repeatTest, filterSpecArgs(specArgs)))
     })
 }
 
 /**
  * run hook or spec via executeSync
  */
-function runSync (fn, repeatTest = 0) {
+function runSync (fn, repeatTest = 0, args = []) {
     return (resolve, reject) =>
-        Fiber(() => executeSync.call(this, fn, repeatTest).then(() => resolve(), reject)).run()
+        Fiber(() => executeSync.call(this, fn, repeatTest, args).then(() => resolve(), reject)).run()
 }
 
 /**
