@@ -629,20 +629,23 @@ let wrapTestFunction = function (fnName, origFn, testInterfaceFnNames, before, a
 
 /**
  * [runInFiberContext description]
- * @param  {[type]} testInterfaceFnNames  global command that runs specs
+ * @param  {[type]} testInterfaceFnNames  command that runs specs
  * @param  {[type]} before               before hook hook
  * @param  {[type]} after                after hook hook
  * @param  {[type]} fnName               test interface command to wrap
+ * @param  {[type]} scope                the scope to run command from, defaults to global
  */
-let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
-    let origFn = global[fnName]
-    global[fnName] = wrapTestFunction(fnName, origFn, testInterfaceFnNames, before, after)
+// The scope parameter is used in the qunit framework since
+// all functions are bound to global.QUnit instead of global
+let runInFiberContext = function (testInterfaceFnNames, before, after, fnName, scope = global) {
+    let origFn = scope[fnName]
+    scope[fnName] = wrapTestFunction(fnName, origFn, testInterfaceFnNames, before, after)
 
     /**
      * support it.skip for the Mocha framework
      */
     if (typeof origFn.skip === 'function') {
-        global[fnName].skip = origFn.skip
+        scope[fnName].skip = origFn.skip
     }
 
     /**
@@ -650,7 +653,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName) {
      */
     if (typeof origFn.only === 'function') {
         let origOnlyFn = origFn.only
-        global[fnName].only = wrapTestFunction(fnName + '.only', origOnlyFn, testInterfaceFnNames, before, after)
+        scope[fnName].only = wrapTestFunction(fnName + '.only', origOnlyFn, testInterfaceFnNames, before, after)
     }
 }
 
