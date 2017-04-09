@@ -126,10 +126,14 @@ describe('wdio-sync', () => {
     describe('runInFiberContext', () => {
         beforeEach(() => {
             global.fakeBefore = (cb) => cb()
+            global.fakeGenericHookFn = (hookFn) => hookFn({prop: true}, () => {})
+            global.fakeGenericSpecFn = (specTitle, specFn) => specFn(() => {}, {prop: true})
         })
 
         afterEach(() => {
             delete global.fakeBefore
+            delete global.fakeGenericHookFn
+            delete global.fakeGenericSpecFn
         })
 
         it('should run function in fiber context', () => {
@@ -166,6 +170,28 @@ describe('wdio-sync', () => {
             global.fakeBefore.should.equal(origFakeBefore)
             global.should.not.have.property('fakeAfter')
             scope.fakeAfter.should.not.equal(origFakeAfter)
+        })
+
+        it('should pass filtered hook arguments to a hook function', async () => {
+            runInFiberContext(['fakeGenericSpecFn'], [], [], 'fakeGenericHookFn')
+            let wasRun = false
+            await fakeGenericHookFn((...hookArgs) => { // eslint-disable-line no-undef
+                hookArgs.should.have.length(1)
+                hookArgs[0].should.have.keys('prop')
+                wasRun = true
+            })
+            wasRun.should.be.true()
+        })
+
+        it('should pass filtered spec arguments to a spec function', async () => {
+            runInFiberContext(['fakeGenericSpecFn'], [], [], 'fakeGenericSpecFn')
+            let wasRun = false
+            await fakeGenericSpecFn('specTitle', (...specArgs) => { // eslint-disable-line no-undef
+                specArgs.should.have.length(1)
+                specArgs[0].should.have.keys('prop')
+                wasRun = true
+            })
+            wasRun.should.be.true()
         })
     })
 })
