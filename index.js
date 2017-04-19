@@ -35,10 +35,10 @@ let sanitizeErrorMessage = function (e) {
     stack = stack.filter(STACKTRACE_FILTER_FN)
     stack = stack.map((e) => '    ' + e.replace(cwd + '/', '').trim())
 
-    /**
-     * this is just an assumption but works in most cases
-     */
-    let errorLine = stack.shift().trim()
+    let errorLine = 'unknown error line'
+    if (stack && stack.length) {
+        errorLine = stack.shift().trim()
+    }
 
     /**
      * correct error occurence
