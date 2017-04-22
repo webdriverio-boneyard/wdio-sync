@@ -35,6 +35,10 @@ let sanitizeErrorMessage = function (e) {
     stack = stack.filter(STACKTRACE_FILTER_FN)
     stack = stack.map((e) => '    ' + e.replace(cwd + '/', '').trim())
 
+    /**
+     * error stack can be empty when test execution is aborted and
+     * the application is not running
+     */
     let errorLine = 'unknown error line'
     if (stack && stack.length) {
         errorLine = stack.shift().trim()
