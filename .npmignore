@@ -18,3 +18,10 @@ coverage
 
 # node-waf configuration
 .lock-wscript
+
+# uncompiled files
+lib
+test
+index.js
+.*
+!build
