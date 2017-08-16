@@ -1,8 +1,6 @@
 import Future from 'fibers/future'
 import assign from 'object.assign'
 
-import { is$$, isElements } from './lib/results'
-
 const Fiber = require('fibers') // ToDo fix unit test to work with imports
 
 const SYNC_COMMANDS = ['domain', '_events', '_maxListeners', 'setMaxListeners', 'emit',
@@ -15,7 +13,10 @@ const STACKTRACE_FILTER_FN = (e) => !e.match(STACKTRACE_FILTER)
 let commandIsRunning = false
 let forcePromises = false
 
-let isAsync = function () {
+/**
+ * helpers
+ */
+const isAsync = function () {
     if (!global.browser || !global.browser.options) {
         return true
     }
@@ -23,7 +24,19 @@ let isAsync = function () {
     return global.browser.options.sync === false
 }
 
-let sanitizeErrorMessage = function (e) {
+const isElements = function (result) {
+    return (
+        typeof result.selector === 'string' &&
+        Array.isArray(result.value) && result.value.length &&
+        typeof result.value[0].ELEMENT !== 'undefined'
+    )
+}
+
+const is$$ = function (result) {
+    return Array.isArray(result) && !!result.length && !!result[0] && result[0].ELEMENT !== undefined
+}
+
+const sanitizeErrorMessage = function (e) {
     let stack = e.stack.split(/\n/g)
     let errorMsg = stack.shift()
     let cwd = process.cwd()
@@ -64,7 +77,7 @@ let sanitizeErrorMessage = function (e) {
 
 // filter out arguments passed to specFn & hookFn, don't allow callbacks
 // as there is no need for user to call e.g. `done()`
-let filterSpecArgs = function (args) {
+const filterSpecArgs = function (args) {
     return args.filter((arg) => typeof arg !== 'function')
 }
 
@@ -77,7 +90,7 @@ let filterSpecArgs = function (args) {
  * @param  {Object[]} args  list of parameter for hook functions
  * @return {Promise}  promise that gets resolved once all hooks finished running
  */
-let executeHooksWithArgs = (hooks = [], args) => {
+const executeHooksWithArgs = (hooks = [], args) => {
     /**
      * make sure hooks are an array of functions
      */
@@ -138,7 +151,7 @@ let executeHooksWithArgs = (hooks = [], args) => {
  * @param  {Function} fn  function to wrap around
  * @return {Function}     wrapped around function
  */
-let wdioSync = global.wdioSync = function (fn, done) {
+const wdioSync = global.wdioSync = function (fn, done) {
     return function (...args) {
         return Fiber(() => {
             const result = fn.apply(this, args)
@@ -158,7 +171,7 @@ let wdioSync = global.wdioSync = function (fn, done) {
  * @param  {Function[]} afterCommand   method to be executed after calling the actual function
  * @return {Function}   actual wrapped function
  */
-let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
+const wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
     if (isAsync()) {
         /**
          * async command wrap
@@ -288,7 +301,7 @@ let wrapCommand = function (fn, commandName, beforeCommand, afterCommand) {
  * @param  {Object} helperScope  instance scope with prototype of already wrapped commands
  * @return {Object}              command result with enhanced prototype
  */
-let applyPrototype = function (result, helperScope) {
+const applyPrototype = function (result, helperScope) {
     /**
      * don't overload result for none objects, arrays and buffer
      */
@@ -361,7 +374,7 @@ let applyPrototype = function (result, helperScope) {
  * @param  {Function[]} beforeCommand  before command hook
  * @param  {Function[]} afterCommand   after command hook
  */
-let wrapCommands = function (instance, beforeCommand, afterCommand) {
+const wrapCommands = function (instance, beforeCommand, afterCommand) {
     const addCommand = instance.addCommand
 
     /**
@@ -462,7 +475,7 @@ let wrapCommands = function (instance, beforeCommand, afterCommand) {
  * @param  {Number}   repeatTest number of retries
  * @return {Promise}             that gets resolved once test/hook is done or was retried enough
  */
-let executeSync = function (fn, repeatTest = 0, args = []) {
+const executeSync = function (fn, repeatTest = 0, args = []) {
     /**
      * if a new hook gets executed we can assume that all commands should have finised
      * with exception of timeouts where `commandIsRunning` will never be reset but here
@@ -497,7 +510,7 @@ let executeSync = function (fn, repeatTest = 0, args = []) {
  * @param  {Number}   repeatTest number of retries
  * @return {Promise}             that gets resolved once test/hook is done or was retried enough
  */
-let executeAsync = function (fn, repeatTest = 0, args = []) {
+const executeAsync = function (fn, repeatTest = 0, args = []) {
     let result, error
 
     /**
@@ -554,7 +567,7 @@ let executeAsync = function (fn, repeatTest = 0, args = []) {
  * @param  {Number}   repeatTest  number of retries if hook fails
  * @return {Function}             wrapped framework hook function
  */
-let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
+const runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
     const hookError = (hookName) => (e) => console.error(`Error in ${hookName}: ${e.stack}`)
 
     return origFn(function (...hookArgs) {
@@ -584,7 +597,7 @@ let runHook = function (hookFn, origFn, before, after, repeatTest = 0) {
  * @param  {Number}   repeatTest  number of retries if test fails
  * @return {Function}             wrapped test function
  */
-let runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
+const runSpec = function (specTitle, specFn, origFn, repeatTest = 0) {
     /**
      * user wants handle async command using promises, no need to wrap in fiber context
      */
@@ -613,7 +626,7 @@ function runSync (fn, repeatTest = 0, args = []) {
  * @param  {string[]} testInterfaceFnNames actual test functions for that framework
  * @return {Function}                      wrapped test/hook function
  */
-let wrapTestFunction = function (fnName, origFn, testInterfaceFnNames, before, after) {
+const wrapTestFunction = function (fnName, origFn, testInterfaceFnNames, before, after) {
     return function (...specArguments) {
         /**
          * Variadic arguments:
@@ -621,9 +634,9 @@ let wrapTestFunction = function (fnName, origFn, testInterfaceFnNames, before, a
          * [title, fn, retryCnt], [title, retryCnt], [fn, retryCnt]
          */
         let retryCnt = typeof specArguments[specArguments.length - 1] === 'number' ? specArguments.pop() : 0
-        let specFn = typeof specArguments[0] === 'function' ? specArguments.shift()
+        const specFn = typeof specArguments[0] === 'function' ? specArguments.shift()
             : (typeof specArguments[1] === 'function' ? specArguments.pop() : undefined)
-        let specTitle = specArguments[0]
+        const specTitle = specArguments[0]
 
         if (testInterfaceFnNames.indexOf(fnName) > -1) {
             if (specFn) return runSpec(specTitle, specFn, origFn, retryCnt)
@@ -639,17 +652,18 @@ let wrapTestFunction = function (fnName, origFn, testInterfaceFnNames, before, a
 }
 
 /**
- * [runInFiberContext description]
- * @param  {[type]} testInterfaceFnNames  command that runs specs
- * @param  {[type]} before               before hook hook
- * @param  {[type]} after                after hook hook
- * @param  {[type]} fnName               test interface command to wrap
- * @param  {[type]} scope                the scope to run command from, defaults to global
+ * Wraps global test function like `it` so that commands can run synchronouse
+ *
+ * The scope parameter is used in the qunit framework since all functions are bound to global.QUnit instead of global
+ *
+ * @param  {String[]} testInterfaceFnNames  command that runs specs
+ * @param  {Function} before               before hook hook
+ * @param  {Function} after                after hook hook
+ * @param  {String}   fnName               test interface command to wrap
+ * @param  {Object}   scope                the scope to run command from, defaults to global
  */
-// The scope parameter is used in the qunit framework since
-// all functions are bound to global.QUnit instead of global
-let runInFiberContext = function (testInterfaceFnNames, before, after, fnName, scope = global) {
-    let origFn = scope[fnName]
+const runInFiberContext = function (testInterfaceFnNames, before, after, fnName, scope = global) {
+    const origFn = scope[fnName]
     scope[fnName] = wrapTestFunction(fnName, origFn, testInterfaceFnNames, before, after)
 
     /**
@@ -663,7 +677,7 @@ let runInFiberContext = function (testInterfaceFnNames, before, after, fnName, s
      * wrap it.only for the Mocha framework
      */
     if (typeof origFn.only === 'function') {
-        let origOnlyFn = origFn.only
+        const origOnlyFn = origFn.only
         scope[fnName].only = wrapTestFunction(fnName + '.only', origOnlyFn, testInterfaceFnNames, before, after)
     }
 }
@@ -675,5 +689,6 @@ export {
     executeHooksWithArgs,
     executeSync,
     executeAsync,
-    wdioSync
+    wdioSync,
+    is$$
 }

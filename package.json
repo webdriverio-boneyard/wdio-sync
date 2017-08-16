@@ -6,7 +6,7 @@
   "scripts": {
     "build": "run-s clean compile",
     "clean": "rm -rf ./build ./coverage",
-    "compile": "babel index.js lib/**/*.js --out-dir build/",
+    "compile": "babel index.js --out-dir build/",
     "eslint": "eslint ./index.js test/",
     "release": "np patch",
     "release:patch": "np patch",

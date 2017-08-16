@@ -1,4 +1,4 @@
-import { is$$ } from '../lib/results'
+import { is$$ } from '../'
 
 describe('results', () => {
     describe('.is$$', () => {
