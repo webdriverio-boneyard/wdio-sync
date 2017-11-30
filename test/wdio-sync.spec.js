@@ -1,3 +1,4 @@
+import assert from 'assert'
 import sinon from 'sinon'
 import {
     wdioSync,
@@ -168,7 +169,7 @@ describe('wdio-sync', () => {
             runInFiberContext(['it'], [], [], 'fakeAfter', scope)
 
             global.fakeBefore.should.equal(origFakeBefore)
-            global.should.not.have.property('fakeAfter')
+            assert(!global.fakeAfter)
             scope.fakeAfter.should.not.equal(origFakeAfter)
         })
 
