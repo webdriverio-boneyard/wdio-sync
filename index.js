@@ -37,6 +37,19 @@ const is$$ = function (result) {
 }
 
 const sanitizeErrorMessage = function (e) {
+    let myStackTrace
+
+    /**
+     * Because the error obejct does not contain the entire stack trace we attempt to get the caller of the method from
+     * the prototype chain. Because the 'use stric' directive is used, the caller is unreacheable but a new error is
+     * thrown that cotains the entire stack, including the line in the test where the initial failure was recorded.
+     */
+    try {
+        var line = Object.getPrototypeOf(Object.getPrototypeOf(e)).constructor.caller
+    } catch (e) {
+        myStackTrace = e.stack.split('\n').slice(2, 7).join('\n')
+    }
+
     let stack = e.stack.split(/\n/g)
     let errorMsg = stack.shift()
     let cwd = process.cwd()
@@ -70,7 +83,14 @@ const sanitizeErrorMessage = function (e) {
     /**
      * add back error message
      */
-    stack.unshift(errorMsg)
+    if (myStackTrace !== undefined) {
+        stack.unshift(errorMsg + '\n' + myStackTrace)
+    } else {
+        if (line !== undefined) {
+            stack.unshift(line)
+        }
+        stack.unshift(errorMsg)
+    }
 
     return stack.join('\n')
 }
