@@ -47,7 +47,7 @@ const sanitizeErrorMessage = function (e) {
     try {
         var line = Object.getPrototypeOf(Object.getPrototypeOf(e)).constructor.caller
     } catch (e) {
-        myStackTrace = e.stack.split('\n').slice(2, 7).join('\n')
+        myStackTrace = e.stack.split('\n').slice(2, e.stack.split('\n').length).join('\n');
     }
 
     let stack = e.stack.split(/\n/g)
