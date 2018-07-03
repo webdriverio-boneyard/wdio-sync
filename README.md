@@ -4,6 +4,7 @@ wdio-sync
 [![Build Status](https://travis-ci.org/webdriverio/wdio-sync.svg?branch=master)](https://travis-ci.org/webdriverio/wdio-sync) [![Code Climate](https://codeclimate.com/github/webdriverio/wdio-sync/badges/gpa.svg)](https://codeclimate.com/github/webdriverio/wdio-sync) [![Test Coverage](https://codeclimate.com/github/webdriverio/wdio-sync/badges/coverage.svg)](https://codeclimate.com/github/webdriverio/wdio-sync/coverage) [![Dependency Status](https://www.versioneye.com/user/projects/58ba933101b5b7004a7b5b8d/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/58ba933101b5b7004a7b5b8d)
 
 ***
+*This is a modified version of the wdio-sync with an enhanced stack trace functionality. All of the rights belong to the wdio team.
 
 A WebdriverIO plugin. Helper module to run WebdriverIO commands synchronously. It overwrites global functions depending on the test framework (e.g. for Mocha `describe` and `it`) and uses Fibers to make commands of WebdriverIO using the wdio testrunner synchronous. This package is consumed by all wdio framework adapters.
 
