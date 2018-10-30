@@ -1,7 +1,7 @@
 wdio-sync
 =========
 
-[![Build Status](https://travis-ci.org/webdriverio-boneyard/wdio-sync.svg?branch=master)]
+![Build Status](https://travis-ci.org/webdriverio-boneyard/wdio-sync.svg?branch=master)
 
 ***
 
